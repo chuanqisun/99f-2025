@@ -8,10 +8,16 @@ import { createComponent } from "./sdk/create-component";
 
 const submissions$ = new BehaviorSubject<Responder[]>([]);
 
+async function resetFor(responder: Responder) {
+  if (!responder.email) return;
+  const responderRef = ref(db, `/responders/${responder.email}`);
+  await update(responderRef, { generated: null, isGenerating: false, error: null });
+}
+
 async function generateFor(responder: Responder, response: "yes" | "no" | "random") {
   if (!responder.email) return;
   const responderRef = ref(db, `/responders/${responder.email}`);
-  await update(responderRef, { isGenerating: true });
+  await update(responderRef, { isGenerating: true, error: null, "generated/vow": null, "generated/photoUrl": null });
   try {
     let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
     const params = {
@@ -93,7 +99,7 @@ const Host = createComponent(() => {
                   ${sub.isGenerating
                     ? html`<span>generating...</span>`
                     : sub.generated?.decision
-                      ? html`<button @click=${() => generateFor(sub, sub.generated!.decision!)}>Regenerate</button>`
+                      ? html`<button @click=${() => resetFor(sub)}>Reset</button>`
                       : html`
                           <button @click=${() => generateFor(sub, "yes")}>Yes</button>
 
