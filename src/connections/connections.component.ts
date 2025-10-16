@@ -4,10 +4,10 @@ import { catchError, debounceTime, distinctUntilChanged, mergeMap, tap } from "r
 import { createComponent } from "../sdk/create-component";
 import { observe } from "../sdk/observe-directive";
 import "./connections.component.css";
-import { saveApiKeys, type ApiKeys } from "./storage";
+import { loadApiKeys, saveApiKeys, type ApiKeys } from "./storage";
 import { testConnection } from "./test-connections";
 
-export const apiKeys$ = new BehaviorSubject<ApiKeys>({ openai: "", gemini: "" });
+export const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
 
 export const ConnectionsComponent = createComponent(() => {
   // 1. Internal state
@@ -156,12 +156,42 @@ export const ConnectionsComponent = createComponent(() => {
         <form class="connections-form" @submit=${handleTestSubmit}>
           <div class="form-field">
             <label for="openai-key">OpenAI API Key</label>
-            <input id="openai-key" type="password" value=${apiKeys.openai || ""} placeholder="sk-..." @input=${handleOpenAIChange} />
+            <input
+              id="openai-key"
+              type="password"
+              value=${apiKeys.openai || ""}
+              placeholder="sk-..."
+              @input=${handleOpenAIChange}
+              @focus=${(e: Event) => (e.target as HTMLInputElement).removeAttribute("readonly")}
+              readonly
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              inputmode="text"
+              data-1p-ignore
+              name="openai-api-key"
+            />
           </div>
 
           <div class="form-field">
             <label for="gemini-key">Gemini API Key</label>
-            <input id="gemini-key" type="password" value=${apiKeys.gemini || ""} placeholder="API key for Google Gemini" @input=${handleGeminiChange} />
+            <input
+              id="gemini-key"
+              type="password"
+              value=${apiKeys.gemini || ""}
+              placeholder="API key for Google Gemini"
+              @input=${handleGeminiChange}
+              @focus=${(e: Event) => (e.target as HTMLInputElement).removeAttribute("readonly")}
+              readonly
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              inputmode="text"
+              data-1p-ignore
+              name="gemini-api-key"
+            />
           </div>
 
           <button type="submit" ?disabled=${observe(isDisabled$)}>${observe(buttonText$)}</button>

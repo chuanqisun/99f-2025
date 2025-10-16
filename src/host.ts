@@ -23,10 +23,13 @@ async function generateFor(responder: Responder, response: "yes" | "no" | "rando
       loveLanguage: responder.loveLanguage || "",
       perfectFirstDate: responder.perfectFirstDate || "",
     };
-    const vow = await generateVow(actualResponse, params);
-    const photoPrompt = await generatePhotoPrompt(actualResponse, params);
-    const photoUrl = await generatePhoto(photoPrompt);
-    await update(responderRef, { generated: { decision: actualResponse, vow, photoUrl }, isGenerating: false });
+    await Promise.all([
+      generateVow(actualResponse, params).then((vow) => update(responderRef, { "generated/vow": vow })),
+      generatePhotoPrompt(actualResponse, params)
+        .then(generatePhoto)
+        .then((photoUrl) => update(responderRef, { "generated/photoUrl": photoUrl })),
+    ]);
+    await update(responderRef, { "generated/decision": actualResponse, isGenerating: false, error: null });
   } catch (error) {
     await update(responderRef, { isGenerating: false, error: error instanceof Error ? error.message : String(error) });
   }
@@ -86,18 +89,20 @@ const Host = createComponent(() => {
             ${submissions.map(
               (sub) => html`
                 <li>
-                  <a href="details.html?email=${sub.email}">${sub.fullName}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
+                  <a target="_blank" href="details.html?email=${sub.email}">${sub.fullName}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
                     ? "📷"
                     : ""}${sub.error ? html`<span title="${sub.error}">⚠️</span>` : ""}
                   ${sub.isGenerating
                     ? html`<span>generating...</span>`
-                    : html`
-                        <button @click=${() => generateFor(sub, "yes")}>Yes</button>
+                    : sub.generated?.decision
+                      ? html`<button @click=${() => generateFor(sub, sub.generated!.decision!)}>Regenerate</button>`
+                      : html`
+                          <button @click=${() => generateFor(sub, "yes")}>Yes</button>
 
-                        <button @click=${() => generateFor(sub, "no")}>No</button>
+                          <button @click=${() => generateFor(sub, "no")}>No</button>
 
-                        <button @click=${() => generateFor(sub, "random")}>Random</button>
-                      `}
+                          <button @click=${() => generateFor(sub, "random")}>Random</button>
+                        `}
                 </li>
               `
             )}
