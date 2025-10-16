@@ -83,9 +83,10 @@ const Host = createComponent(() => {
             ${submissions.map(
               (sub) => html`
                 <li>
-                  <a href="details.html?id=${sub.email}">${sub.fullNamePronounsGender}</a> ${sub.isGenerating
-                    ? html`<span>generating...</span>`
-                    : html`<button @click=${() => generateFor(sub)}>Generate</button>`}
+                  <a href="details.html?id=${sub.email}">${sub.fullNamePronounsGender}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
+                    ? "📷"
+                    : ""}
+                  ${sub.isGenerating ? html`<span>generating...</span>` : html`<button @click=${() => generateFor(sub)}>Generate</button>`}
                 </li>
               `
             )}
