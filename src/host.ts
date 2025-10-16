@@ -8,11 +8,12 @@ import { createComponent } from "./sdk/create-component";
 
 const submissions$ = new BehaviorSubject<Responder[]>([]);
 
-async function generateFor(responder: Responder) {
+async function generateFor(responder: Responder, response: "yes" | "no" | "random") {
   if (!responder.email) return;
   const responderRef = ref(db, `/responders/${responder.email}`);
   await update(responderRef, { isGenerating: true });
   try {
+    let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
     const params = {
       fullNamePronounsGender: responder.fullNamePronounsGender || "",
       aiFeeling: responder.aiFeeling || "",
@@ -22,10 +23,10 @@ async function generateFor(responder: Responder) {
       loveLanguage: responder.loveLanguage || "",
       perfectFirstDate: responder.perfectFirstDate || "",
     };
-    const vow = await generateVow("yes", params);
-    const photoPrompt = await generatePhotoPrompt("yes", params);
+    const vow = await generateVow(actualResponse, params);
+    const photoPrompt = await generatePhotoPrompt(actualResponse, params);
     const photoUrl = await generatePhoto(photoPrompt);
-    await update(responderRef, { generated: { vow, photoUrl }, isGenerating: false });
+    await update(responderRef, { generated: { decision: actualResponse, vow, photoUrl }, isGenerating: false });
   } catch (error) {
     await update(responderRef, { isGenerating: false });
   }
@@ -45,6 +46,7 @@ export interface Responder {
   vow?: string;
   isGenerating?: boolean;
   generated?: {
+    decision?: "yes" | "no";
     vow?: string;
     photoUrl?: string;
   };
@@ -83,10 +85,18 @@ const Host = createComponent(() => {
             ${submissions.map(
               (sub) => html`
                 <li>
-                  <a href="details.html?id=${sub.email}">${sub.fullNamePronounsGender}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
+                  <a href="details.html?email=${sub.email}">${sub.fullNamePronounsGender}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
                     ? "📷"
                     : ""}
-                  ${sub.isGenerating ? html`<span>generating...</span>` : html`<button @click=${() => generateFor(sub)}>Generate</button>`}
+                  ${sub.isGenerating
+                    ? html`<span>generating...</span>`
+                    : html`
+                        <button @click=${() => generateFor(sub, "yes")}>Yes</button>
+
+                        <button @click=${() => generateFor(sub, "no")}>No</button>
+
+                        <button @click=${() => generateFor(sub, "random")}>Random</button>
+                      `}
                 </li>
               `
             )}
