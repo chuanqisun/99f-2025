@@ -1,6 +1,7 @@
 import { get, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
+import "./certificate.css";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import "./prototype.css";
@@ -26,11 +27,11 @@ if (!email) {
       const message = isMarriage ? "Congratulations on your union!" : "Certificate of Dissolution";
       render(
         html`
-          <div class="certificate" style="text-align: center; padding: 20px; border: 2px solid #000; max-width: 600px; margin: 0 auto;">
-            <h1 style="font-family: 'Great Vibes', cursive; font-size: 48px;">${title}</h1>
-            <img src="${ifDefined(photoUrl)}" alt="Generated Photo" style="display: block; margin: 20px auto; max-width: 300px; border-radius: 10px;" />
-            <p style="font-family: 'Playfair Display', serif; font-size: 24px; margin: 20px 0;">${name}</p>
-            <p style="font-family: 'Playfair Display', serif; font-size: 18px;">${message}</p>
+          <div class="certificate">
+            <h1 class="certificate-title">${title}</h1>
+            <img class="certificate-photo" src="${ifDefined(photoUrl)}" alt="Generated Photo" />
+            <p class="certificate-name">${name}</p>
+            <p class="certificate-message">${message}</p>
           </div>
         `,
         document.getElementById("app")!

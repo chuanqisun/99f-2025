@@ -1,0 +1,30 @@
+.certificate {
+  text-align: center;
+  padding: 20px;
+  border: 2px solid #000;
+  margin: 0 auto;
+}
+
+.certificate-title {
+  font-family: "Great Vibes", cursive;
+  font-size: 48px;
+}
+
+.certificate-photo {
+  display: block;
+  margin: 20px auto;
+  width: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.certificate-name {
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  margin: 20px 0;
+}
+
+.certificate-message {
+  font-family: "Playfair Display", serif;
+  font-size: 18px;
+}

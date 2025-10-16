@@ -3,7 +3,7 @@ import { html, render } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
 import { ConnectionsComponent } from "./connections/connections.component";
 import { db } from "./firebase";
-import { generatePhoto, generatePhotoPrompt, generateVow } from "./generate.js";
+import { generatePhoto, generateVow } from "./generate.js";
 import { createComponent } from "./sdk/create-component";
 
 const submissions$ = new BehaviorSubject<Responder[]>([]);
@@ -25,9 +25,7 @@ async function generateFor(responder: Responder, response: "yes" | "no" | "rando
     };
     await Promise.all([
       generateVow(actualResponse, params).then((vow) => update(responderRef, { "generated/vow": vow })),
-      generatePhotoPrompt(actualResponse, params)
-        .then((prompt) => generatePhoto(prompt, responder.headshotDataUrl || ""))
-        .then((photoUrl) => update(responderRef, { "generated/photoUrl": photoUrl })),
+      generatePhoto(actualResponse, responder.headshotDataUrl || "").then((photoUrl) => update(responderRef, { "generated/photoUrl": photoUrl })),
     ]);
     await update(responderRef, { "generated/decision": actualResponse, isGenerating: false, error: null });
   } catch (error) {

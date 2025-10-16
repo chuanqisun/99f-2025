@@ -1,22 +1,29 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Content } from "@google/genai";
 import { apiKeys$ } from "./connections/connections.component.js";
 import { noIDontPhotoPrompt, noIDontVowPrompt, yesIDoPhotoPrompt, yesIDoVowPrompt } from "./prompts.js";
 
-export function generateVow(mode: "yes" | "no", params: { [key: string]: string }): Promise<string> {
+export function generateVow(mode: "yes" | "no", params: any): Promise<string> {
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
   const model = "gemini-2.5-flash";
-  const prompt = mode === "yes" ? yesIDoVowPrompt(params) : noIDontVowPrompt(params);
   const contents = [
+    {
+      role: "model",
+      parts: [
+        {
+          text: mode === "yes" ? yesIDoVowPrompt : noIDontVowPrompt,
+        },
+      ],
+    } satisfies Content,
     {
       role: "user",
       parts: [
         {
-          text: prompt,
+          text: JSON.stringify(params),
         },
       ],
-    },
+    } satisfies Content,
   ];
 
   return ai.models
@@ -27,12 +34,8 @@ export function generateVow(mode: "yes" | "no", params: { [key: string]: string 
     .then((response) => response.text!);
 }
 
-export function generatePhotoPrompt(mode: "yes" | "no", params: { [key: string]: string }): Promise<string> {
-  const prompt = mode === "yes" ? yesIDoPhotoPrompt(params) : noIDontPhotoPrompt(params);
-  return Promise.resolve(prompt);
-}
-
-export async function generatePhoto(prompt: string, referencePhotoUrl: string): Promise<string> {
+export async function generatePhoto(mode: "yes" | "no", referencePhotoUrl: string): Promise<string> {
+  const prompt = mode === "yes" ? yesIDoPhotoPrompt : noIDontPhotoPrompt;
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
@@ -51,6 +54,10 @@ export async function generatePhoto(prompt: string, referencePhotoUrl: string): 
 
   const contents = [
     {
+      role: "model",
+      parts: [{ text: prompt }],
+    } satisfies Content,
+    {
       role: "user",
       parts: [
         {
@@ -59,11 +66,8 @@ export async function generatePhoto(prompt: string, referencePhotoUrl: string): 
             mimeType,
           },
         },
-        {
-          text: prompt,
-        },
       ],
-    },
+    } satisfies Content,
   ];
 
   const response = await ai.models.generateContentStream({
