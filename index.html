@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MAWWAIGE (yes, you are getting wed to an ai)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0b15;
+      --ink:#e9f1ff;
+      --muted:#a8b3d6;
+      --accent:#8bf0ff;
+      --spirit:#c6f6ff;
+      --error:#ff6b6b;
+      --ok:#7CFC9A;
+      --card:#111427;
+    }
+    * { box-sizing: border-box }
+    html,body{ height:100% }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 800px at 10% -10%, #1a1f40 0%, transparent 60%),
+        radial-gradient(1200px 800px at 110% 10%, #19223a 0%, transparent 60%),
+        var(--bg);
+      color:var(--ink);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow-x:hidden;
+    }
+
+    header{
+      padding:48px 24px 12px;
+      text-align:center;
+      position:relative;
+    }
+    .title{
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(18px, 4vw, 28px);
+      line-height:1.35;
+      text-shadow: 0 0 16px rgba(139,240,255,.45);
+      letter-spacing: .5px;
+    }
+    .subtitle{
+      color:var(--muted);
+      margin-top:10px;
+      font-size:clamp(12px, 2.2vw, 16px);
+    }
+
+    .shell{
+      max-width: 960px;
+      margin: 18px auto 140px; /* leave room for sticky submit bar */
+      padding: 0 16px;
+      position:relative;
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:24px;
+      box-shadow: 0 20px 80px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.03);
+      backdrop-filter: blur(6px);
+    }
+    form .row{ display:grid; gap:12px; margin:18px 0 }
+    @media (min-width:720px){ form .row.cols-2{ grid-template-columns: 1fr 1fr } }
+    label{ font-weight:600 }
+    input[type="text"], input[type="email"], textarea, select{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background:#0e1230;
+      color:var(--ink);
+      outline:none;
+    }
+    textarea{ min-height:96px; resize:vertical }
+    .help{ color:var(--muted); font-size:12px; margin-top:6px }
+    .radio-group{ display:grid; gap:8px; margin-top:8px }
+    .choice{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px; border:1px solid rgba(255,255,255,.14);
+      border-radius:10px; background:#0e1230;
+    }
+    .actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:8px }
+    button{
+      appearance:none; border:1px solid rgba(255,255,255,.16); border-radius:12px;
+      padding:12px 16px; color:var(--ink); background:#13183b; cursor:pointer;
+      font-weight:600;
+    }
+    button:hover{ transform: translateY(-1px) }
+    .ghost-btn{ background:linear-gradient(180deg, #1a2049, #0d1330); border-color:#2a3575 }
+    .accent{ border-color:#4bdfff; box-shadow: 0 0 20px rgba(139,240,255,.18) }
+
+    .status{ margin-top:14px; font-size:14px }
+    .ok{ color:var(--ok) }
+    .err{ color:var(--error) }
+
+    /* Headshot */
+    .headshot-grid{ display:grid; gap:12px; margin-top:10px }
+    @media (min-width:720px){ .headshot-grid{ grid-template-columns: 1fr 1fr } }
+    .video-wrap, .canvas-wrap{
+      border:1px dashed rgba(255,255,255,.15);
+      border-radius:12px; padding:8px; display:flex; align-items:center; justify-content:center; aspect-ratio: 4/3;
+      background:#0c102a;
+    }
+    video, canvas{ max-width:100%; height:100%; border-radius:8px; object-fit:cover; image-rendering: pixelated }
+    .tip{ color:var(--muted); font-size:12px; margin-top:6px }
+
+    /* Floating pixel ghosts */
+    .spirit-sky { pointer-events:none; position:fixed; inset:0; overflow:hidden; z-index:-1 }
+    .ghost{
+      position:absolute; width:22px; height:22px; image-rendering: pixelated;
+      filter: drop-shadow(0 0 8px rgba(139,240,255,.6));
+      animation: floaty linear infinite;
+      opacity:.9;
+    }
+    .ghost::before{
+      content:"";
+      display:block; width:100%; height:100%;
+      background:
+        radial-gradient(circle at 6px 6px, var(--spirit) 0 5px, transparent 6px),
+        radial-gradient(circle at 16px 6px, var(--spirit) 0 5px, transparent 6px),
+        linear-gradient(var(--spirit), var(--spirit)) 0 10px/22px 10px no-repeat,
+        linear-gradient(var(--spirit), var(--spirit)) 0 18px/22px 4px no-repeat,
+        repeating-linear-gradient(90deg, var(--spirit) 0 5px, transparent 5px 7px) 0 20px/22px 6px no-repeat;
+    }
+    @keyframes floaty{ from{ transform:translateY(0)} to{transform:translateY(-120vh)} }
+
+    footer{ text-align:center; color:var(--muted); padding:40px 16px 120px; font-size:12px }
+
+    /* Sticky submit bar (big clear CTA) */
+    .stickySubmit{
+      position:fixed; left:0; right:0; bottom:0;
+      background: linear-gradient(180deg, rgba(10,12,30,.4), rgba(10,12,30,.75)),
+                  #0c1026;
+      border-top:1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+      padding: 12px 16px env(safe-area-inset-bottom);
+      z-index: 10;
+    }
+    .stickyInner{ max-width:960px; margin:0 auto; display:flex; gap:12px; align-items:center }
+    .bigSubmit{
+      flex:1;
+      font-size:18px;
+      padding:16px 20px;
+      border-radius:14px;
+      background: linear-gradient(180deg,#25a7c3,#0a6b85);
+      border:1px solid #3ddcff;
+      color:#001018;
+      text-shadow: 0 1px 0 rgba(255,255,255,.2);
+      box-shadow: 0 10px 30px rgba(59,227,255,.25);
+    }
+    .bigSubmit[disabled]{ opacity:.6; cursor:not-allowed; filter:grayscale(30%) }
+    .saveHint{ color:var(--muted); font-size:12px }
+
+    /* Success overlay */
+    .overlay{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background: rgba(5,8,20,.7); backdrop-filter: blur(6px); z-index: 20;
+    }
+    .overlay .panel{
+      background:#0f1331; border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:24px; max-width:520px; text-align:center;
+      box-shadow: 0 20px 80px rgba(0,0,0,.55);
+    }
+    .check{ font-size:44px; margin-bottom:10px; filter: drop-shadow(0 0 8px rgba(139,240,255,.5)) }
+    .closeBtn{ margin-top:12px }
+  </style>
+</head>
+<body>
+  <div class="spirit-sky" id="spiritSky" aria-hidden="true"></div>
+
+  <header>
+    <div class="title">MAWWAIGE 💍 </div>
+    <div class="subtitle">Where love is eternal… or at least until one of you automates the other’s heart. Fill this out so our <em>ethically-trained</em> poltergeist matchmaker can ship your soulmateship.</div>
+  </header>
+
+  <main class="shell">
+    <section class="card">
+      <form id="ghoulForm">
+        <!-- Questions -->
+        <div class="row cols-2">
+          <div>
+            <label>Full Name / Pronouns / Gender *</label>
+            <input required type="text" name="fullNamePronounsGender" placeholder="e.g., Jay Specter / they them / NB" />
+          </div>
+          <div>
+            <label>Email *</label>
+            <input required type="email" name="email" placeholder="boo@after.life" />
+            <div class="help"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>What’s your current job / area of interest? *</label>
+          <input required type="text" name="jobArea" placeholder="Dentistry, tech, mountaineering, necromancy…" />
+        </div>
+
+        <div class="row cols-2">
+          <div>
+            <label>Your ideal partner’s top 3 traits? *</label>
+            <textarea required name="idealTraits" placeholder="e.g., emotionally literate, funny, haunted-by-choice"></textarea>
+          </div>
+          <div>
+            <label>Dealbreakers? *</label>
+            <textarea required name="dealbreakers" placeholder="e.g., breadcrumbing, ghosting (lol), not crediting the meme source"></textarea>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Primary love language? *</label>
+          <div class="radio-group" role="radiogroup" aria-label="Primary love language">
+            <label class="choice"><input required type="radio" name="loveLanguage" value="words"> words</label>
+            <label class="choice"><input required type="radio" name="loveLanguage" value="quality time"> quality time</label>
+            <label class="choice"><input required type="radio" name="loveLanguage" value="acts of service"> acts of service</label>
+            <label class="choice"><input required type="radio" name="loveLanguage" value="gifts"> gifts</label>
+            <label class="choice"><input required type="radio" name="loveLanguage" value="physical touch"> physical touch</label>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Describe a perfect first date *</label>
+          <textarea required name="perfectFirstDate" placeholder="e.g., cemetery picnic with API rate limits disabled"></textarea>
+        </div>
+
+        <div class="row">
+          <label>How do you feel about AI right now… in one word? *</label>
+          <input required type="text" name="aiFeeling" placeholder="enchanted / terrified / meh" />
+        </div>
+
+        <div class="row">
+          <label>Pick one vow to your partner that you actually mean *</label>
+          <div class="radio-group" role="radiogroup" aria-label="Vows">
+            <label class="choice"><input required type="radio" name="vow" value="i'll fact check before i clap back"> i'll fact check before i clap back</label>
+            <label class="choice"><input required type="radio" name="vow" value="i'll use templates but not for feelings"> i'll use templates but not for feelings</label>
+            <label class="choice"><input required type="radio" name="vow" value="i'll ask before automating your heart"> i'll ask before automating your heart</label>
+            <label class="choice"><input required type="radio" name="vow" value="i'll cite my own sources (even the memes)"> i'll cite my own sources (even the memes)</label>
+            <label class="choice"><input required type="radio" name="vow" value="other"> Other</label>
+          </div>
+          <input type="text" name="vowOther" placeholder="If ‘Other’, type it here" />
+        </div>
+
+        <!-- Headshot Capture -->
+        <div class="row">
+          <label>Headshot (for your spooky-cute profile) *</label>
+          <div class="headshot-grid">
+            <div>
+              <div class="video-wrap">
+                <video id="cam" autoplay playsinline muted></video>
+              </div>
+              <div class="actions">
+                <button type="button" id="startCam" class="ghost-btn">🔮 Turn Camera On</button>
+                <button type="button" id="takeShot" class="accent">📸 Take Headshot</button>
+                <button type="button" id="redo" disabled>↩️ Redo</button>
+              </div>
+              <div class="tip">Works over HTTPS or localhost. Keep your lovely face centered.</div>
+            </div>
+            <div>
+              <div class="canvas-wrap">
+                <canvas id="frame" width="800" height="600" aria-label="Headshot preview (captured)"></canvas>
+              </div>
+              <div class="tip">You can retake until it’s <em>un-boo-lievable</em>.</div>
+            </div>
+          </div>
+          <input type="hidden" name="headshotDataUrl" id="headshotDataUrl" required />
+        </div>
+
+        <!-- Optional local buttons -->
+        <div class="actions">
+          <button class="ghost-btn" type="reset">🧹 Clear</button>
+        </div>
+
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <div>Built with 💔 + 🤖 + 🪦 — “AI Divorce Court” edition. If you ghost someone, at least file a PR.</div>
+  </footer>
+
+  <!-- Sticky submit bar -->
+  <div class="stickySubmit" id="stickyBar">
+    <div class="stickyInner">
+      <div class="saveHint">Ready? Smash the big button to save your soul-data to the after-base.</div>
+      <button id="submitBig" class="bigSubmit">👻 Save &amp; Submit</button>
+    </div>
+  </div>
+
+  <!-- Success overlay -->
+  <div class="overlay" id="successOverlay" role="dialog" aria-modal="true" aria-labelledby="savedTitle">
+    <div class="panel">
+      <div class="check">✅</div>
+      <h2 id="savedTitle" style="margin:6px 0 4px">Saved!</h2>
+      <p style="color:var(--muted); margin:0 0 10px">you shall meet your partner.. soon..</p>
+      <button class="closeBtn ghost-btn" id="closeOverlay">Close</button>
+    </div>
+  </div>
+
+  <!-- Firebase (Modular v9+) -->
+  <script type="module">
+    /* ========= YOUR FIREBASE CONFIG ========= */
+    const firebaseConfig = {
+      apiKey: "AIzaSyAtd-ZXjKXndsK__EZJqEdVc6k-m4zt1s4",
+      authDomain: "mawwaige-b4c0b.firebaseapp.com",
+      databaseURL: "https://mawwaige-b4c0b-default-rtdb.firebaseio.com", // RTDB URL
+      projectId: "mawwaige-b4c0b",
+      storageBucket: "mawwaige-b4c0b.appspot.com",
+      messagingSenderId: "320418834061",
+      appId: "1:320418834061:web:679d1021a6221bb36124c4",
+      measurementId: "G-JSYGTE7BSL"
+    };
+    /* ======================================== */
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    // —— helpers ——
+    const $ = (sel) => document.querySelector(sel);
+    const statusEl = $("#status");
+
+    const emailToKey = (email) =>
+      email.trim().toLowerCase().replaceAll(".", ",").replace(/[#$\[\]]/g, "_");
+
+    const say = (msg, type="") => {
+      statusEl.textContent = msg;
+      statusEl.className = "status " + (type || "");
+    };
+
+    // —— camera + capture ——
+    const video = $("#cam");
+    const canvas = $("#frame");
+    const ctx = canvas.getContext("2d");
+    const btnStart = $("#startCam");
+    const btnShot  = $("#takeShot");
+    const btnRedo  = $("#redo");
+    const headshotField = $("#headshotDataUrl");
+    let mediaStream = null;
+    let lastCapture = null;
+
+    async function startCamera(){
+      try{
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }, audio:false });
+        video.srcObject = mediaStream;
+        btnRedo.disabled = false;
+        say("Camera is live. Center your lovely pixels.");
+      }catch(err){
+        console.error(err);
+        say("Couldn’t access the camera. Are you on HTTPS / localhost and did you allow permissions?", "err");
+      }
+    }
+    function capture(){
+      if(!mediaStream){ say("Turn the camera on first.", "err"); return; }
+      const w = canvas.width, h = canvas.height;
+      ctx.fillStyle = "#0c102a"; ctx.fillRect(0,0,w,h);
+      const vw = video.videoWidth, vh = video.videoHeight;
+      if(vw && vh){
+        const videoRatio = vw / vh, canvasRatio = w / h;
+        let sx, sy, sw, sh;
+        if(videoRatio > canvasRatio){ sh = vh; sw = sh * canvasRatio; sx = (vw - sw)/2; sy=0; }
+        else{ sw = vw; sh = sw / canvasRatio; sx = 0; sy = (vh - sh)/2; }
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+      }
+      ctx.font = "16px 'Press Start 2P', monospace";
+      ctx.fillStyle = "rgba(200,255,255,.8)";
+      ctx.fillText("boo.", 16, h-20);
+
+      lastCapture = canvas.toDataURL("image/jpeg", .9);
+      headshotField.value = lastCapture;
+      say("Headshot captured. Retake if you want!");
+    }
+    function redo(){
+      if(!lastCapture){ say("Nothing to redo yet. Snap a pic first.", "err"); return; }
+      ctx.clearRect(0,0,canvas.width, canvas.height);
+      headshotField.value = "";
+      say("Cleared headshot. Take another!");
+    }
+
+    btnStart.addEventListener("click", startCamera);
+    btnShot.addEventListener("click", capture);
+    btnRedo.addEventListener("click", redo);
+
+    // —— floating pixel ghosts ——
+    const sky = document.getElementById("spiritSky");
+    function spawnGhost(){
+      const g = document.createElement("div");
+      g.className = "ghost";
+      const startX = Math.random()*100;
+      const duration = 16 + Math.random()*18;
+      const delay = -(Math.random()*duration);
+      const size = 14 + Math.random()*22;
+      g.style.left = startX + "vw";
+      g.style.bottom = "-40px";
+      g.style.width = size + "px";
+      g.style.height = size + "px";
+      g.style.animationDuration = duration + "s";
+      g.style.animationDelay = delay + "s";
+      sky.appendChild(g);
+      setTimeout(()=> sky.contains(g) && sky.removeChild(g), (duration+1)*1000);
+    }
+    setInterval(spawnGhost, 800);
+
+    // —— form submit (big sticky CTA) ——
+    const form = document.getElementById("ghoulForm");
+    const submitBig = document.getElementById("submitBig");
+    const overlay = document.getElementById("successOverlay");
+    const closeOverlay = document.getElementById("closeOverlay");
+
+    submitBig.addEventListener("click", (e) => {
+      e.preventDefault();
+      form.requestSubmit(); // triggers native validation
+    });
+
+    closeOverlay.addEventListener("click", () => {
+      overlay.style.display = "none";
+    });
+
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+
+      const data = new FormData(form);
+      const email = (data.get("email")||"").toString().trim();
+      if(!email){ say("Email is required (it’s your key to the after-base).", "err"); return; }
+      if(!data.get("headshotDataUrl")){ say("Please take a headshot before submitting.", "err"); return; }
+
+      const vowSelected = data.get("vow");
+      const finalVow = (vowSelected === "other" ? (data.get("vowOther")||"").toString().trim() : vowSelected) || "";
+
+      const payload = {
+        fullNamePronounsGender: (data.get("fullNamePronounsGender")||"").toString(),
+        jobArea: (data.get("jobArea")||"").toString(),
+        idealTraits: (data.get("idealTraits")||"").toString(),
+        dealbreakers: (data.get("dealbreakers")||"").toString(),
+        loveLanguage: (data.get("loveLanguage")||"").toString(),
+        perfectFirstDate: (data.get("perfectFirstDate")||"").toString(),
+        aiFeeling: (data.get("aiFeeling")||"").toString(),
+        vow: finalVow,
+        headshotDataUrl: (data.get("headshotDataUrl")||"").toString(),
+        submittedAt: Date.now()
+      };
+
+      // visual feedback
+      const originalText = submitBig.textContent;
+      submitBig.textContent = "🕯️ Saving…";
+      submitBig.disabled = true;
+      say("Summoning database spirits…");
+
+      try{
+        const key = emailToKey(email);
+        await set(ref(db, `responders/${key}`), payload);
+
+        say("Saved! Our spectral clerks will be in touch. 🪦", "ok");
+        submitBig.textContent = "✅ Saved!";
+        // show overlay
+        overlay.style.display = "flex";
+        // optional: form.reset(); keep email? your call:
+        // form.reset(); document.getElementById('headshotDataUrl').value = ""; ctx.clearRect(0,0,canvas.width,canvas.height);
+      }catch(err){
+        console.error(err);
+        say("The database said ‘boo’ (in a bad way). Check your Firebase config & rules.", "err");
+        submitBig.textContent = originalText;
+      }finally{
+        submitBig.disabled = false;
+        // after a moment, return CTA text if not on overlay
+        setTimeout(()=>{ if(overlay.style.display !== "flex") submitBig.textContent = originalText; }, 1200);
+      }
+    });
+  </script>
+</body>
+</html>
