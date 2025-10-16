@@ -3,7 +3,7 @@ export interface ApiKeys {
   gemini?: string;
 }
 
-const STORAGE_KEY = "moodboard-ai-api-keys";
+const STORAGE_KEY = "99f-api-keys";
 
 export function saveApiKeys(keys: ApiKeys): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
