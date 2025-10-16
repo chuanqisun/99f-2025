@@ -26,7 +26,7 @@ async function generateFor(responder: Responder, response: "yes" | "no" | "rando
     await Promise.all([
       generateVow(actualResponse, params).then((vow) => update(responderRef, { "generated/vow": vow })),
       generatePhotoPrompt(actualResponse, params)
-        .then(generatePhoto)
+        .then((prompt) => generatePhoto(prompt, responder.headshotDataUrl || ""))
         .then((photoUrl) => update(responderRef, { "generated/photoUrl": photoUrl })),
     ]);
     await update(responderRef, { "generated/decision": actualResponse, isGenerating: false, error: null });

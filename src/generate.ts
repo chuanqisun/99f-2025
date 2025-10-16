@@ -32,7 +32,7 @@ export function generatePhotoPrompt(mode: "yes" | "no", params: { [key: string]:
   return Promise.resolve(prompt);
 }
 
-export async function generatePhoto(prompt: string): Promise<string> {
+export async function generatePhoto(prompt: string, referencePhotoUrl: string): Promise<string> {
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
@@ -40,10 +40,25 @@ export async function generatePhoto(prompt: string): Promise<string> {
     responseModalities: ["IMAGE", "TEXT"],
   };
   const model = "gemini-2.5-flash-image-preview";
+
+  // Parse the reference photo data URL
+  const dataUrlMatch = referencePhotoUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!dataUrlMatch) {
+    throw new Error("Invalid reference photo URL format");
+  }
+  const mimeType = dataUrlMatch[1];
+  const base64Data = dataUrlMatch[2];
+
   const contents = [
     {
       role: "user",
       parts: [
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType,
+          },
+        },
         {
           text: prompt,
         },
