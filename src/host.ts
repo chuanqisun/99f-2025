@@ -15,7 +15,7 @@ async function generateFor(responder: Responder, response: "yes" | "no" | "rando
   try {
     let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
     const params = {
-      fullNamePronounsGender: responder.fullNamePronounsGender || "",
+      fullName: responder.fullName || "",
       aiFeeling: responder.aiFeeling || "",
       dealbreakers: responder.dealbreakers || "",
       idealTraits: responder.idealTraits || "",
@@ -28,7 +28,7 @@ async function generateFor(responder: Responder, response: "yes" | "no" | "rando
     const photoUrl = await generatePhoto(photoPrompt);
     await update(responderRef, { generated: { decision: actualResponse, vow, photoUrl }, isGenerating: false });
   } catch (error) {
-    await update(responderRef, { isGenerating: false });
+    await update(responderRef, { isGenerating: false, error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -36,7 +36,7 @@ export interface Responder {
   email?: string;
   aiFeeling?: string;
   dealbreakers?: string;
-  fullNamePronounsGender?: string;
+  fullName?: string;
   headshotDataUrl?: string;
   idealTraits?: string;
   jobArea?: string;
@@ -45,6 +45,7 @@ export interface Responder {
   submittedAt?: number;
   vow?: string;
   isGenerating?: boolean;
+  error?: string;
   generated?: {
     decision?: "yes" | "no";
     vow?: string;
@@ -85,9 +86,9 @@ const Host = createComponent(() => {
             ${submissions.map(
               (sub) => html`
                 <li>
-                  <a href="details.html?email=${sub.email}">${sub.fullNamePronounsGender}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
+                  <a href="details.html?email=${sub.email}">${sub.fullName}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
                     ? "📷"
-                    : ""}
+                    : ""}${sub.error ? html`<span title="${sub.error}">⚠️</span>` : ""}
                   ${sub.isGenerating
                     ? html`<span>generating...</span>`
                     : html`

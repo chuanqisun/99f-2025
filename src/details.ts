@@ -58,7 +58,7 @@ const Details = createComponent(() => {
               ? html`
                   <h2>Submission Details</h2>
                   ${submission.headshotDataUrl ? html`<img src="${submission.headshotDataUrl}" alt="Headshot" style="max-width: 200px;" />` : ""}
-                  <p><strong>Full Name, Pronouns, Gender:</strong> ${submission.fullNamePronounsGender || "N/A"}</p>
+                  <p><strong>Full Name:</strong> ${submission.fullName || "N/A"}</p>
                   <p><strong>Email:</strong> ${submission.email || "N/A"}</p>
                   <p><strong>Job Area:</strong> ${submission.jobArea || "N/A"}</p>
                   <p><strong>AI Feeling:</strong> ${submission.aiFeeling || "N/A"}</p>

@@ -20,7 +20,7 @@ if (!email) {
         return;
       }
       const { decision, photoUrl } = responder.generated;
-      const name = responder.fullNamePronounsGender || "Unknown";
+      const name = responder.fullName || "Unknown";
       const isMarriage = decision === "yes";
       const title = isMarriage ? "Marriage Certificate" : "Divorce Certificate";
       const message = isMarriage ? "Congratulations on your union!" : "Certificate of Dissolution";
