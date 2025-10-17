@@ -12,7 +12,6 @@
 
 .form-status {
   padding: var(--spacing-unit);
-  background: #f9f9f9;
   border-radius: 2px;
 }
 
@@ -21,7 +20,7 @@
 }
 
 .test-form {
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid currentColor;
   padding-top: calc(var(--spacing-unit) * 2);
   margin-top: calc(var(--spacing-unit) * 2);
   display: flex;
@@ -32,7 +31,7 @@
 .test-result {
   padding: var(--spacing-unit);
   background: #f0f8ff;
-  border: 1px solid #e0e6ff;
+  border: 1px solid currentColor;
   border-radius: 2px;
 }
 

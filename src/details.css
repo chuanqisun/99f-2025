@@ -1,3 +1,11 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #1a1a1a;
+}
+
 dialog {
   width: 100vw;
   height: 100vh;
@@ -15,7 +23,7 @@ dialog {
   }
 
   &::backdrop {
-    background-color: white;
+    background-color: rgba(0, 0, 0, 0.8);
   }
 }
 
@@ -31,7 +39,7 @@ dialog .link {
   margin-bottom: 10px;
   font-size: 18px;
   text-decoration: none;
-  color: blue;
+  color: #64b5f6;
 }
 
 dialog button {
@@ -43,8 +51,8 @@ dialog button {
   z-index: 100;
   position: sticky;
   top: 0;
-  background: white;
-  border-bottom: 1px solid currentColor;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
 }
 
 main {

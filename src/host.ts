@@ -168,19 +168,19 @@ const Host = createComponent(() => {
                           ? html`<span>${sub.generated.decision === "yes" ? "Yes" : "No"}</span>`
                           : html`
                               <div class="action-buttons">
-                                <button @click=${() => generateFor(sub.guid || "", "yes")}>Yes</button>
-                                <button @click=${() => generateFor(sub.guid || "", "no")}>No</button>
-                                <button @click=${() => generateFor(sub.guid || "", "random")}>Random</button>
+                                <button @click=${() => generateFor(sub.guid || "", "yes")} ?disabled=${sub.isCompleted}>Yes</button>
+                                <button @click=${() => generateFor(sub.guid || "", "no")} ?disabled=${sub.isCompleted}>No</button>
+                                <button @click=${() => generateFor(sub.guid || "", "random")} ?disabled=${sub.isCompleted}>Random</button>
                               </div>
                             `}
                       </div>
                     </td>
                     <td>
                       <div class="action-buttons">
-                        <button @click=${() => resetFor(sub.guid || "")}>Reset</button>
                         ${!sub.isCompleted
-                          ? html`<button @click=${() => markAsDone(sub.guid || "")}>Archive</button>`
-                          : html`<button @click=${() => markAsNew(sub.guid || "")}>Unarchive</button>`}
+                          ? html`<button @click=${() => markAsDone(sub.guid || "")}>Done</button>
+                              <button @click=${() => resetFor(sub.guid || "")}>Reset</button>`
+                          : html`<button @click=${() => markAsNew(sub.guid || "")}>Undone</button>`}
                         <button @click=${() => deleteFor(sub.guid || "")} class="danger">Delete</button>
                       </div>
                     </td>

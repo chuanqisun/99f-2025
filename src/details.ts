@@ -69,6 +69,13 @@ const Details = createComponent(() => {
       ({ submission, error, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl }) => html`
         <header class="app-header">
           <div class="action-buttons">
+            <button
+              @click=${() => {
+                window.location.href = "./host.html";
+              }}
+            >
+              Back
+            </button>
             ${submission?.generated?.humanVow && humanVowQrDataUrl
               ? html`<button
                   @click=${() => {
@@ -89,10 +96,10 @@ const Details = createComponent(() => {
                   Show Certificate QR
                 </button>`
               : ""}
-            ${submission?.generated?.decision ? html`<button @click=${() => resetFor(submission?.guid || "")}>Reset</button>` : ""}
             ${!submission?.isCompleted
-              ? html`<button @click=${() => markAsDone(submission?.guid || "")}>Mark as Done</button>`
-              : html`<button @click=${() => markAsNew(submission?.guid || "")}>Mark as New</button>`}
+              ? html`<button @click=${() => markAsDone(submission?.guid || "")}>Done</button>
+                  <button @click=${() => resetFor(submission?.guid || "")}>Reset</button>`
+              : html` <button @click=${() => markAsNew(submission?.guid || "")}>Undone</button> `}
             <button class="danger" @click=${() => deleteFor(submission?.guid || "")}>Delete</button>
           </div>
         </header>
@@ -106,7 +113,6 @@ const Details = createComponent(() => {
                   <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>
                   ${submission.generated?.photoUrl ? html`<img src="${submission.generated?.photoUrl}" alt="Generated Photo" style="max-width: 200px;" />` : ""}
 
-                  <hr />
                   <h2>Details</h2>
                   ${submission.headshotDataUrl ? html`<img src="${submission.headshotDataUrl}" alt="Headshot" style="max-width: 200px;" />` : ""}
                   <p><strong>Full Name:</strong> ${submission.fullName || "N/A"}</p>
