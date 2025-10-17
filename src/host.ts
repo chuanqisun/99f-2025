@@ -79,6 +79,7 @@ const Host = createComponent(() => {
       (submissions) => html`
         <header class="app-header">
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
+          <span>*For official use only*</span>
         </header>
         <dialog class="connection-form" id="connection-dialog">
           <div class="connections-dialog-body">
