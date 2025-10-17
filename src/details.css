@@ -1,4 +1,4 @@
-#qr-dialog {
+dialog {
   width: 100vw;
   height: 100vh;
   margin: 0;
@@ -15,14 +15,14 @@
   }
 }
 
-#qr-dialog img {
+dialog img {
   object-fit: contain;
   width: 100%;
   max-height: 70vh;
   margin-bottom: 20px;
 }
 
-#qr-dialog .link {
+dialog .link {
   margin-top: auto;
   margin-bottom: 10px;
   font-size: 18px;
@@ -30,6 +30,6 @@
   color: blue;
 }
 
-#qr-dialog button {
+dialog button {
   margin-top: 10px;
 }

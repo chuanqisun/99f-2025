@@ -5,9 +5,11 @@ import "./certificate.css";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import "./prototype.css";
+import { decodeEmail } from "./email-encoding";
 
 const urlParams = new URLSearchParams(window.location.search);
-const email = urlParams.get("email");
+const encodedEmail = urlParams.get("id");
+const email = encodedEmail ? decodeEmail(encodedEmail) : null;
 
 if (!email) {
   render(html`<p>No email provided</p>`, document.getElementById("app")!);

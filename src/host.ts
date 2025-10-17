@@ -5,6 +5,7 @@ import { ConnectionsComponent } from "./connections/connections.component";
 import { db } from "./firebase";
 import { generatePhoto, generateVow } from "./generate.js";
 import { createComponent } from "./sdk/create-component";
+import { encodeEmail } from "./email-encoding";
 
 const submissions$ = new BehaviorSubject<Responder[]>([]);
 
@@ -97,7 +98,7 @@ const Host = createComponent(() => {
             ${submissions.map(
               (sub) => html`
                 <li>
-                  <a target="_blank" href="details.html?email=${sub.email}">${sub.fullName}</a> ${sub.generated?.humanVow && sub.generated?.aiVow
+                  <a target="_blank" href="details.html?id=${encodeEmail(sub.email || '')}">${sub.fullName}</a> ${sub.generated?.humanVow && sub.generated?.aiVow
                     ? "📋"
                     : ""}${sub.generated?.photoUrl ? "📷" : ""}${sub.error ? html`<span title="${sub.error}">⚠️</span>` : ""}
                   ${sub.isGenerating

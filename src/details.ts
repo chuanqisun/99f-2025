@@ -6,6 +6,7 @@ import "./details.css";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import { createComponent } from "./sdk/create-component";
+import { decodeEmail, encodeEmail } from "./email-encoding";
 
 const state$ = new BehaviorSubject<{
   submission: Responder | null;
@@ -25,7 +26,8 @@ const state$ = new BehaviorSubject<{
 
 const Details = createComponent(() => {
   const urlParams = new URLSearchParams(window.location.search);
-  const email = urlParams.get("email");
+  const encodedEmail = urlParams.get("id");
+  const email = encodedEmail ? decodeEmail(encodedEmail) : null;
 
   if (!email) {
     state$.next({ submission: null, error: "No Email provided", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
@@ -36,8 +38,8 @@ const Details = createComponent(() => {
       (snapshot) => {
         if (snapshot.exists()) {
           const submission = snapshot.val();
-          const certificateUrl = `certificate.html?email=${email}`;
-          const humanVowUrl = `human-vow.html?email=${email}`;
+          const certificateUrl = `certificate.html?id=${encodedEmail}`;
+          const humanVowUrl = `human-vow.html?id=${encodedEmail}`;
           Promise.all([toDataURL(certificateUrl, { width: 800 }).catch(() => null), toDataURL(humanVowUrl, { width: 800 }).catch(() => null)]).then(
             ([qrDataUrl, humanVowQrDataUrl]) => {
               state$.next({ submission, error: null, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl });

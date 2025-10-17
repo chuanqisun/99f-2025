@@ -4,6 +4,7 @@ import { BehaviorSubject, map } from "rxjs";
 import { db } from "./firebase";
 import "./human-vow.css";
 import { createComponent } from "./sdk/create-component";
+import { decodeEmail } from "./email-encoding";
 
 const state$ = new BehaviorSubject<{ vow: string | null; error: string | null }>({
   vow: null,
@@ -12,7 +13,8 @@ const state$ = new BehaviorSubject<{ vow: string | null; error: string | null }>
 
 const HumanVow = createComponent(() => {
   const urlParams = new URLSearchParams(window.location.search);
-  const email = urlParams.get("email");
+  const encodedEmail = urlParams.get("id");
+  const email = encodedEmail ? decodeEmail(encodedEmail) : null;
 
   if (!email) {
     state$.next({ vow: null, error: "No Email provided" });
