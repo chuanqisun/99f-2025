@@ -13,29 +13,46 @@ import { createComponent } from "./sdk/create-component";
 
 const submissions$ = new BehaviorSubject<Responder[]>([]);
 
-async function resetFor(responder: Responder) {
-  if (!responder.email) return;
-  const responderRef = ref(db, `/responders/${responder.email}`);
+// Helper to get responder data from email
+async function getResponder(email: string): Promise<Responder | null> {
+  const responderRef = ref(db, `/responders/${email}`);
+  return new Promise((resolve) => {
+    onValue(
+      responderRef,
+      (snapshot) => {
+        resolve(snapshot.val() as Responder | null);
+      },
+      { onlyOnce: true }
+    );
+  });
+}
+
+async function resetFor(email: string) {
+  if (!email) return;
+  const responderRef = ref(db, `/responders/${email}`);
   await update(responderRef, { generated: null, isGenerating: false, error: null });
 }
 
-async function markAsDone(responder: Responder) {
-  if (!responder.email) return;
-  const responderRef = ref(db, `/responders/${responder.email}`);
+async function markAsDone(email: string) {
+  if (!email) return;
+  const responderRef = ref(db, `/responders/${email}`);
   await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
 }
 
-async function markAsNew(responder: Responder) {
-  if (!responder.email) return;
-  const responderRef = ref(db, `/responders/${responder.email}`);
+async function markAsNew(email: string) {
+  if (!email) return;
+  const responderRef = ref(db, `/responders/${email}`);
   await update(responderRef, { isCompleted: false, modifiedAt: null });
 }
 
-async function generateFor(responder: Responder, response: "yes" | "no" | "random") {
-  if (!responder.email) return;
-  const responderRef = ref(db, `/responders/${responder.email}`);
+async function generateFor(email: string, response: "yes" | "no" | "random") {
+  if (!email) return;
+  const responderRef = ref(db, `/responders/${email}`);
   await update(responderRef, { isGenerating: true, error: null, "generated/humanVow": null, "generated/aiVow": null, "generated/photoUrl": null });
   try {
+    const responder = await getResponder(email);
+    if (!responder) return;
+
     let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
     const params = {
       fullName: responder.fullName || "",
@@ -145,15 +162,15 @@ const Host = createComponent(() => {
                         ? html`<span>Generating...</span>`
                         : sub.generated?.decision
                           ? html`
-                              <button @click=${() => resetFor(sub)}>Reset</button>
+                              <button @click=${() => resetFor(sub.email || "")}>Reset</button>
                               ${!sub.isCompleted
-                                ? html`<button @click=${() => markAsDone(sub)}>Mark as Done</button>`
-                                : html`<button @click=${() => markAsNew(sub)}>Mark as New</button>`}
+                                ? html`<button @click=${() => markAsDone(sub.email || "")}>Mark as Done</button>`
+                                : html`<button @click=${() => markAsNew(sub.email || "")}>Mark as New</button>`}
                             `
                           : html`
-                              <button @click=${() => generateFor(sub, "yes")}>Yes</button>
-                              <button @click=${() => generateFor(sub, "no")}>No</button>
-                              <button @click=${() => generateFor(sub, "random")}>Random</button>
+                              <button @click=${() => generateFor(sub.email || "", "yes")}>Yes</button>
+                              <button @click=${() => generateFor(sub.email || "", "no")}>No</button>
+                              <button @click=${() => generateFor(sub.email || "", "random")}>Random</button>
                             `}
                     </td>
                   </tr>

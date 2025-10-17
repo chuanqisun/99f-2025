@@ -615,6 +615,7 @@
         const finalVow = (vowSelected === "other" ? (data.get("vowOther") || "").toString().trim() : vowSelected) || "";
 
         const payload = {
+          email,
           fullName: (data.get("fullName") || "").toString(),
           jobArea: (data.get("jobArea") || "").toString(),
           idealTraits: (data.get("idealTraits") || "").toString(),
