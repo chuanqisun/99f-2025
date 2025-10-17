@@ -103,12 +103,13 @@ const Details = createComponent(() => {
                     ${submission.generated && !submission.isCompleted ? html`<button @click=${() => markAsDone(submission)}>Mark as Done</button>` : ""}
                   </div>
 
-                  <h2>Generated</h2>
+                  <h2>${submission.fullName}</h2>
                   <p><strong>Human Vow:</strong> ${submission.generated?.humanVow || "N/A"}</p>
                   <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>
                   ${submission.generated?.photoUrl ? html`<img src="${submission.generated?.photoUrl}" alt="Generated Photo" style="max-width: 200px;" />` : ""}
 
-                  <h2>Submission Details</h2>
+                  <hr />
+                  <h2>Details</h2>
                   ${submission.headshotDataUrl ? html`<img src="${submission.headshotDataUrl}" alt="Headshot" style="max-width: 200px;" />` : ""}
                   <p><strong>Full Name:</strong> ${submission.fullName || "N/A"}</p>
                   <p><strong>Email:</strong> ${submission.email || "N/A"}</p>
