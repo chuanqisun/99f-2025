@@ -25,10 +25,28 @@ const state$ = new BehaviorSubject<{
   humanVowUrl: null,
 });
 
-async function markAsDone(responder: Responder) {
-  if (!responder.guid) return;
-  const responderRef = ref(db, `/responders/${responder.guid}`);
+async function markAsDone(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
   await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
+}
+
+async function markAsNew(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
+  await update(responderRef, { isCompleted: false, modifiedAt: null });
+}
+
+async function deleteFor(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
+  await update(responderRef, { deleted: true, modifiedAt: Date.now() });
+}
+
+async function resetFor(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
+  await update(responderRef, { generated: null, isGenerating: false, error: null });
 }
 
 const Details = createComponent(() => {
@@ -39,13 +57,14 @@ const Details = createComponent(() => {
     state$.next({ submission: null, error: "No ID provided", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
   } else {
     const submissionRef = ref(db, `responders/${guid}`);
+    const certificateUrl = `certificate.html?id=${guid}`;
+    const humanVowUrl = `human-vow.html?id=${guid}`;
+
     onValue(
       submissionRef,
       (snapshot) => {
         if (snapshot.exists()) {
           const submission = snapshot.val();
-          const certificateUrl = `certificate.html?id=${guid}`;
-          const humanVowUrl = `human-vow.html?id=${guid}`;
           Promise.all([toDataURL(certificateUrl, { width: 800 }).catch(() => null), toDataURL(humanVowUrl, { width: 800 }).catch(() => null)]).then(
             ([qrDataUrl, humanVowQrDataUrl]) => {
               state$.next({ submission, error: null, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl });
@@ -98,7 +117,11 @@ const Details = createComponent(() => {
                           Show Human Vow QR
                         </button>`
                       : ""}
-                    ${submission.generated && !submission.isCompleted ? html`<button @click=${() => markAsDone(submission)}>Mark as Done</button>` : ""}
+                    ${submission.generated?.decision ? html`<button @click=${() => resetFor(submission.guid || "")}>Reset</button>` : ""}
+                    ${!submission.isCompleted
+                      ? html`<button @click=${() => markAsDone(submission.guid || "")}>Mark as Done</button>`
+                      : html`<button @click=${() => markAsNew(submission.guid || "")}>Mark as New</button>`}
+                    <button @click=${() => deleteFor(submission.guid || "")}>Delete</button>
                   </div>
 
                   <h2>${submission.fullName}</h2>

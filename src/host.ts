@@ -44,6 +44,12 @@ async function markAsNew(guid: string) {
   await update(responderRef, { isCompleted: false, modifiedAt: null });
 }
 
+async function deleteFor(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
+  await update(responderRef, { deleted: true, modifiedAt: Date.now() });
+}
+
 async function generateFor(guid: string, response: "yes" | "no" | "random") {
   if (!guid) return;
   const responderRef = ref(db, `/responders/${guid}`);
@@ -140,7 +146,7 @@ const Host = createComponent(() => {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Status</th>
+                <th>Decision</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -150,28 +156,40 @@ const Host = createComponent(() => {
                   <tr data-completed=${ifDefined(sub.isCompleted)}>
                     <td>
                       <a target="_blank" href="details.html?id=${sub.guid}">${sub.fullName}</a>
-                    </td>
-                    <td>
                       ${sub.generated?.humanVow && sub.generated?.aiVow ? "📋" : ""}${sub.generated?.photoUrl ? "📷" : ""}${sub.error
                         ? html`<span title="${sub.error}">⚠️</span>`
                         : ""}
-                      ${sub.isGenerating ? html`<span>generating...</span>` : ""} ${sub.isCompleted ? "✅" : ""}
+                      ${sub.isCompleted ? "✅" : ""}
                     </td>
                     <td>
-                      ${sub.isGenerating
-                        ? html`<span>Generating...</span>`
-                        : sub.generated?.decision
-                          ? html`
-                              <button @click=${() => resetFor(sub.guid || "")}>Reset</button>
-                              ${!sub.isCompleted
-                                ? html`<button @click=${() => markAsDone(sub.guid || "")}>Mark as Done</button>`
-                                : html`<button @click=${() => markAsNew(sub.guid || "")}>Mark as New</button>`}
-                            `
+                      <div class="decision-column">
+                        ${sub.isGenerating
+                          ? html`<span>Generating...</span>`
                           : html`
-                              <button @click=${() => generateFor(sub.guid || "", "yes")}>Yes</button>
-                              <button @click=${() => generateFor(sub.guid || "", "no")}>No</button>
-                              <button @click=${() => generateFor(sub.guid || "", "random")}>Random</button>
+                              ${sub.generated?.decision
+                                ? html`
+                                <div class="action-buttons"></div>
+                                  <span>${sub.generated.decision === "yes" ? "👍" : "👎"}</span>
+                                </div>
+                                `
+                                : html`
+                                    <div class="action-buttons">
+                                      <button @click=${() => generateFor(sub.guid || "", "yes")}>Yes</button>
+                                      <button @click=${() => generateFor(sub.guid || "", "no")}>No</button>
+                                      <button @click=${() => generateFor(sub.guid || "", "random")}>Random</button>
+                                    </div>
+                                  `}
                             `}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="action-buttons">
+                        ${sub.generated?.decision ? html` <button @click=${() => resetFor(sub.guid || "")}>Reset</button> ` : ""}
+                        ${!sub.isCompleted
+                          ? html`<button @click=${() => markAsDone(sub.guid || "")}>Archive</button>`
+                          : html`<button @click=${() => markAsNew(sub.guid || "")}>Mark as New</button>`}
+                        <button @click=${() => deleteFor(sub.guid || "")}>Delete</button>
+                      </div>
                     </td>
                   </tr>
                 `
