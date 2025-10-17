@@ -35,6 +35,9 @@ export interface Responder {
     humanVow?: string;
     aiVow?: string;
     aiAnswer?: string;
+    aiVoice?: string;
+    aiVowAudioUrl?: string;
+    aiAnswerAudioUrl?: string;
     /* @deprecated */
     vow?: string;
     photoUrl?: string;

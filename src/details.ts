@@ -4,12 +4,13 @@ import "./prototype.css";
 import { onValue, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { toDataURL } from "qrcode";
-import { BehaviorSubject, map } from "rxjs";
+import { BehaviorSubject, map, Subscription } from "rxjs";
 import { deleteFor, generateFor, markAsDone, markAsNew, resetFor } from "./actions";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import { renderResponderStatus } from "./responder-utils";
 import { createComponent } from "./sdk/create-component";
+import { playAudioBlob } from "./text-to-speech";
 
 const state$ = new BehaviorSubject<{
   submission: Responder | null;
@@ -18,6 +19,8 @@ const state$ = new BehaviorSubject<{
   certificateUrl: string | null;
   humanVowQrDataUrl: string | null;
   humanVowUrl: string | null;
+  playingAiVow: boolean;
+  playingAiAnswer: boolean;
 }>({
   submission: null,
   error: null,
@@ -25,14 +28,28 @@ const state$ = new BehaviorSubject<{
   certificateUrl: null,
   humanVowQrDataUrl: null,
   humanVowUrl: null,
+  playingAiVow: false,
+  playingAiAnswer: false,
 });
+
+let aiVowSubscription: Subscription | null = null;
+let aiAnswerSubscription: Subscription | null = null;
 
 const Details = createComponent(() => {
   const urlParams = new URLSearchParams(window.location.search);
   const guid = urlParams.get("id");
 
   if (!guid) {
-    state$.next({ submission: null, error: "No ID provided", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
+    state$.next({
+      submission: null,
+      error: "No ID provided",
+      qrDataUrl: null,
+      certificateUrl: null,
+      humanVowQrDataUrl: null,
+      humanVowUrl: null,
+      playingAiVow: false,
+      playingAiAnswer: false,
+    });
   } else {
     const submissionRef = ref(db, `responders/${guid}`);
     const certificateUrl = `certificate.html?id=${guid}`;
@@ -45,11 +62,20 @@ const Details = createComponent(() => {
           const submission = snapshot.val();
           Promise.all([toDataURL(certificateUrl, { width: 800 }).catch(() => null), toDataURL(humanVowUrl, { width: 800 }).catch(() => null)]).then(
             ([qrDataUrl, humanVowQrDataUrl]) => {
-              state$.next({ submission, error: null, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl });
+              state$.next({ ...state$.value, submission, error: null, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl });
             }
           );
         } else {
-          state$.next({ submission: null, error: "Submission not found", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
+          state$.next({
+            submission: null,
+            error: "Submission not found",
+            qrDataUrl: null,
+            certificateUrl: null,
+            humanVowQrDataUrl: null,
+            humanVowUrl: null,
+            playingAiVow: false,
+            playingAiAnswer: false,
+          });
         }
       },
       (error) => {
@@ -60,14 +86,74 @@ const Details = createComponent(() => {
           certificateUrl: null,
           humanVowQrDataUrl: null,
           humanVowUrl: null,
+          playingAiVow: false,
+          playingAiAnswer: false,
         });
       }
     );
   }
 
+  const playAudio = (audioUrl: string, field: "aiVow" | "aiAnswer") => {
+    if (!audioUrl) return;
+
+    // Convert data URL to blob
+    fetch(audioUrl)
+      .then((res) => res.blob())
+      .then((blob) => {
+        // Update state to show playing
+        if (field === "aiVow") {
+          state$.next({ ...state$.value, playingAiVow: true });
+          const subscription = playAudioBlob(blob).subscribe({
+            complete: () => {
+              state$.next({ ...state$.value, playingAiVow: false });
+              aiVowSubscription = null;
+            },
+            error: () => {
+              state$.next({ ...state$.value, playingAiVow: false });
+              aiVowSubscription = null;
+            },
+          });
+          aiVowSubscription = subscription;
+        } else {
+          state$.next({ ...state$.value, playingAiAnswer: true });
+          const subscription = playAudioBlob(blob).subscribe({
+            complete: () => {
+              state$.next({ ...state$.value, playingAiAnswer: false });
+              aiAnswerSubscription = null;
+            },
+            error: () => {
+              state$.next({ ...state$.value, playingAiAnswer: false });
+              aiAnswerSubscription = null;
+            },
+          });
+          aiAnswerSubscription = subscription;
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading audio:", err);
+        if (field === "aiVow") {
+          state$.next({ ...state$.value, playingAiVow: false });
+        } else {
+          state$.next({ ...state$.value, playingAiAnswer: false });
+        }
+      });
+  };
+
+  const stopAudio = (field: "aiVow" | "aiAnswer") => {
+    if (field === "aiVow" && aiVowSubscription) {
+      aiVowSubscription.unsubscribe();
+      aiVowSubscription = null;
+      state$.next({ ...state$.value, playingAiVow: false });
+    } else if (field === "aiAnswer" && aiAnswerSubscription) {
+      aiAnswerSubscription.unsubscribe();
+      aiAnswerSubscription = null;
+      state$.next({ ...state$.value, playingAiAnswer: false });
+    }
+  };
+
   return state$.pipe(
     map(
-      ({ submission, error, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl }) => html`
+      ({ submission, error, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl, playingAiVow, playingAiAnswer }) => html`
         <header class="app-header">
           <div class="action-buttons">
             <button
@@ -118,8 +204,29 @@ const Details = createComponent(() => {
               ? html`
                   <h2>${submission.fullName} ${renderResponderStatus(submission)}</h2>
                   <p><strong>Human Vow:</strong> ${submission.generated?.humanVow || "N/A"}</p>
-                  <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>
-                  <p><strong>AI Final Answer:</strong> ${submission.generated?.aiAnswer || "N/A"}</p>
+                  <p>
+                    ${playingAiVow
+                      ? html`<button @click=${() => stopAudio("aiVow")}>Stop</button>`
+                      : html`<button
+                          @click=${() => playAudio(submission.generated?.aiVowAudioUrl || "", "aiVow")}
+                          ?disabled=${!submission.generated?.aiVowAudioUrl}
+                        >
+                          ▶️
+                        </button>`}
+                    <strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}
+                  </p>
+                  <p>
+                    ${playingAiAnswer
+                      ? html`<button @click=${() => stopAudio("aiAnswer")}>Stop</button>`
+                      : html`<button
+                          @click=${() => playAudio(submission.generated?.aiAnswerAudioUrl || "", "aiAnswer")}
+                          ?disabled=${!submission.generated?.aiAnswerAudioUrl}
+                        >
+                          ▶️
+                        </button>`}
+                    <strong>AI Final Answer:</strong> ${submission.generated?.aiAnswer || "N/A"}
+                  </p>
+                  <p><strong>AI Voice:</strong> ${submission.generated?.aiVoice || "N/A"}</p>
                   ${submission.generated?.photoUrl ? html`<img src="${submission.generated?.photoUrl}" alt="Generated Photo" style="max-width: 200px;" />` : ""}
 
                   <h2>Details</h2>
