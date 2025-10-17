@@ -13,6 +13,10 @@ dialog {
   &:not([open]) {
     display: none;
   }
+
+  &::backdrop {
+    background-color: white;
+  }
 }
 
 dialog img {
@@ -34,12 +38,15 @@ dialog button {
   margin-top: 10px;
 }
 
-.action-buttons {
+.app-header {
+  padding: 8px;
+  z-index: 100;
   position: sticky;
   top: 0;
   background: white;
-  padding: 16px 0;
-  z-index: 100;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 24px;
+  border-bottom: 1px solid currentColor;
+}
+
+main {
+  padding: 0 16px;
 }

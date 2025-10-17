@@ -1,10 +1,11 @@
 import "./details.css";
 import "./prototype.css";
 
-import { onValue, ref, update } from "firebase/database";
+import { onValue, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { toDataURL } from "qrcode";
 import { BehaviorSubject, map } from "rxjs";
+import { deleteFor, markAsDone, markAsNew, resetFor } from "./actions";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import { createComponent } from "./sdk/create-component";
@@ -24,30 +25,6 @@ const state$ = new BehaviorSubject<{
   humanVowQrDataUrl: null,
   humanVowUrl: null,
 });
-
-async function markAsDone(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
-}
-
-async function markAsNew(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { isCompleted: false, modifiedAt: null });
-}
-
-async function deleteFor(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { deleted: true, modifiedAt: Date.now() });
-}
-
-async function resetFor(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { generated: null, isGenerating: false, error: null });
-}
 
 const Details = createComponent(() => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -90,40 +67,40 @@ const Details = createComponent(() => {
   return state$.pipe(
     map(
       ({ submission, error, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl }) => html`
-        <header class="app-header"></header>
+        <header class="app-header">
+          <div class="action-buttons">
+            ${submission?.generated?.humanVow && humanVowQrDataUrl
+              ? html`<button
+                  @click=${() => {
+                    const dialog = document.getElementById("human-vow-qr-dialog") as HTMLDialogElement;
+                    dialog.showModal();
+                  }}
+                >
+                  Show Human Vow QR
+                </button>`
+              : ""}
+            ${submission?.generated && qrDataUrl
+              ? html`<button
+                  @click=${() => {
+                    const dialog = document.getElementById("qr-dialog") as HTMLDialogElement;
+                    dialog.showModal();
+                  }}
+                >
+                  Show Certificate QR
+                </button>`
+              : ""}
+            ${submission?.generated?.decision ? html`<button @click=${() => resetFor(submission?.guid || "")}>Reset</button>` : ""}
+            ${!submission?.isCompleted
+              ? html`<button @click=${() => markAsDone(submission?.guid || "")}>Mark as Done</button>`
+              : html`<button @click=${() => markAsNew(submission?.guid || "")}>Mark as New</button>`}
+            <button class="danger" @click=${() => deleteFor(submission?.guid || "")}>Delete</button>
+          </div>
+        </header>
         <main>
           ${error
             ? html`<p>Error: ${error}</p>`
             : submission
               ? html`
-                  <div class="action-buttons">
-                    ${submission.generated && qrDataUrl
-                      ? html`<button
-                          @click=${() => {
-                            const dialog = document.getElementById("qr-dialog") as HTMLDialogElement;
-                            dialog.showModal();
-                          }}
-                        >
-                          Show Certificate QR
-                        </button>`
-                      : ""}
-                    ${submission.generated?.humanVow && humanVowQrDataUrl
-                      ? html`<button
-                          @click=${() => {
-                            const dialog = document.getElementById("human-vow-qr-dialog") as HTMLDialogElement;
-                            dialog.showModal();
-                          }}
-                        >
-                          Show Human Vow QR
-                        </button>`
-                      : ""}
-                    ${submission.generated?.decision ? html`<button @click=${() => resetFor(submission.guid || "")}>Reset</button>` : ""}
-                    ${!submission.isCompleted
-                      ? html`<button @click=${() => markAsDone(submission.guid || "")}>Mark as Done</button>`
-                      : html`<button @click=${() => markAsNew(submission.guid || "")}>Mark as New</button>`}
-                    <button @click=${() => deleteFor(submission.guid || "")}>Delete</button>
-                  </div>
-
                   <h2>${submission.fullName}</h2>
                   <p><strong>Human Vow:</strong> ${submission.generated?.humanVow || "N/A"}</p>
                   <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>

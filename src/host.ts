@@ -5,6 +5,7 @@ import { onValue, ref, update } from "firebase/database";
 import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
 import { BehaviorSubject, map } from "rxjs";
+import { deleteFor, markAsDone, markAsNew, resetFor } from "./actions";
 import { ConnectionsComponent } from "./connections/connections.component";
 import { db } from "./firebase";
 import { generatePhoto, generateVow } from "./generate.js";
@@ -26,39 +27,25 @@ async function getResponder(guid: string): Promise<Responder | null> {
   });
 }
 
-async function resetFor(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { generated: null, isGenerating: false, error: null });
-}
-
-async function markAsDone(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
-}
-
-async function markAsNew(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { isCompleted: false, modifiedAt: null });
-}
-
-async function deleteFor(guid: string) {
-  if (!guid) return;
-  const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { deleted: true, modifiedAt: Date.now() });
-}
-
 async function generateFor(guid: string, response: "yes" | "no" | "random") {
   if (!guid) return;
   const responderRef = ref(db, `/responders/${guid}`);
-  await update(responderRef, { isGenerating: true, error: null, "generated/humanVow": null, "generated/aiVow": null, "generated/photoUrl": null });
+
+  // Calculate the actual decision first
+  let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
+
+  // Update eagerly with the decision
+  await update(responderRef, {
+    isGenerating: true,
+    error: null,
+    "generated/humanVow": null,
+    "generated/aiVow": null,
+    "generated/photoUrl": null,
+    "generated/decision": actualResponse,
+  });
   try {
     const responder = await getResponder(guid);
     if (!responder) return;
-
-    let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
     const params = {
       fullName: responder.fullName || "",
       aiFeeling: responder.aiFeeling || "",
@@ -72,7 +59,7 @@ async function generateFor(guid: string, response: "yes" | "no" | "random") {
       generateVow(actualResponse, params).then(({ humanVow, aiVow }) => update(responderRef, { "generated/humanVow": humanVow, "generated/aiVow": aiVow })),
       generatePhoto(actualResponse, responder.headshotDataUrl || "").then((photoUrl) => update(responderRef, { "generated/photoUrl": photoUrl })),
     ]);
-    await update(responderRef, { "generated/decision": actualResponse, isGenerating: false, error: null });
+    await update(responderRef, { isGenerating: false, error: null });
   } catch (error) {
     await update(responderRef, { isGenerating: false, error: error instanceof Error ? error.message : String(error) });
   }
@@ -156,39 +143,34 @@ const Host = createComponent(() => {
                   <tr data-completed=${ifDefined(sub.isCompleted)}>
                     <td>
                       <a target="_blank" href="details.html?id=${sub.guid}">${sub.fullName}</a>
-                      ${sub.generated?.humanVow && sub.generated?.aiVow ? "📋" : ""}${sub.generated?.photoUrl ? "📷" : ""}${sub.error
-                        ? html`<span title="${sub.error}">⚠️</span>`
-                        : ""}
-                      ${sub.isCompleted ? "✅" : ""}
+                      ${sub.isGenerating
+                        ? html`
+                            <span title="Generating vow">⏳</span>
+                            <span title="Generating photo">⏳</span>
+                          `
+                        : html` ${sub.generated?.humanVow && sub.generated?.aiVow ? "📋" : ""}${sub.generated?.photoUrl ? "📷" : ""} `}
+                      ${sub.error ? html`<span title="${sub.error}">⚠️</span>` : ""} ${sub.isCompleted ? "✅" : ""}
                     </td>
                     <td>
                       <div class="decision-column">
-                        ${sub.isGenerating
-                          ? html`<span>Generating...</span>`
+                        ${sub.generated?.decision
+                          ? html`<span>${sub.generated.decision === "yes" ? "Yes" : "No"}</span>`
                           : html`
-                              ${sub.generated?.decision
-                                ? html`
-                                <div class="action-buttons"></div>
-                                  <span>${sub.generated.decision === "yes" ? "👍" : "👎"}</span>
-                                </div>
-                                `
-                                : html`
-                                    <div class="action-buttons">
-                                      <button @click=${() => generateFor(sub.guid || "", "yes")}>Yes</button>
-                                      <button @click=${() => generateFor(sub.guid || "", "no")}>No</button>
-                                      <button @click=${() => generateFor(sub.guid || "", "random")}>Random</button>
-                                    </div>
-                                  `}
+                              <div class="action-buttons">
+                                <button @click=${() => generateFor(sub.guid || "", "yes")}>Yes</button>
+                                <button @click=${() => generateFor(sub.guid || "", "no")}>No</button>
+                                <button @click=${() => generateFor(sub.guid || "", "random")}>Random</button>
+                              </div>
                             `}
                       </div>
                     </td>
                     <td>
                       <div class="action-buttons">
-                        ${sub.generated?.decision ? html` <button @click=${() => resetFor(sub.guid || "")}>Reset</button> ` : ""}
+                        <button @click=${() => resetFor(sub.guid || "")}>Reset</button>
                         ${!sub.isCompleted
                           ? html`<button @click=${() => markAsDone(sub.guid || "")}>Archive</button>`
-                          : html`<button @click=${() => markAsNew(sub.guid || "")}>Mark as New</button>`}
-                        <button @click=${() => deleteFor(sub.guid || "")}>Delete</button>
+                          : html`<button @click=${() => markAsNew(sub.guid || "")}>Unarchive</button>`}
+                        <button @click=${() => deleteFor(sub.guid || "")} class="danger">Delete</button>
                       </div>
                     </td>
                   </tr>
