@@ -1,8 +1,74 @@
-import { ref, remove, update } from "firebase/database";
+import { onValue, ref, remove, update } from "firebase/database";
 import { db } from "./firebase";
+import { generatePhoto, generateVow } from "./generate";
+import type { Responder } from "./host";
 
 // Map to track abort controllers for ongoing generation per GUID
 export const generationAbortControllers = new Map<string, AbortController>();
+
+// Helper to get responder data from guid
+async function getResponder(guid: string): Promise<Responder | null> {
+  const responderRef = ref(db, `/responders/${guid}`);
+  return new Promise((resolve) => {
+    onValue(
+      responderRef,
+      (snapshot) => {
+        resolve(snapshot.val() as Responder | null);
+      },
+      { onlyOnce: true }
+    );
+  });
+}
+
+export async function generateFor(guid: string, response: "yes" | "no" | "random") {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
+
+  // Create a new abort controller for this generation request
+  const abortController = new AbortController();
+  generationAbortControllers.set(guid, abortController);
+
+  // Calculate the actual decision first
+  let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
+
+  // Update eagerly with the decision
+  await update(responderRef, {
+    isGenerating: true,
+    error: null,
+    "generated/humanVow": null,
+    "generated/aiVow": null,
+    "generated/aiAnswer": null,
+    "generated/photoUrl": null,
+    "generated/decision": actualResponse,
+  });
+  try {
+    const responder = await getResponder(guid);
+    if (!responder) return;
+    const params = {
+      fullName: responder.fullName || "",
+      aiFeeling: responder.aiFeeling || "",
+      dealbreakers: responder.dealbreakers || "",
+      idealTraits: responder.idealTraits || "",
+      jobArea: responder.jobArea || "",
+      loveLanguage: responder.loveLanguage || "",
+      perfectFirstDate: responder.perfectFirstDate || "",
+    };
+    await Promise.all([
+      generateVow(actualResponse, params, abortController.signal).then(({ humanVow, aiVow, aiAnswer }) =>
+        update(responderRef, { "generated/humanVow": humanVow, "generated/aiVow": aiVow, "generated/aiAnswer": aiAnswer })
+      ),
+      generatePhoto(actualResponse, responder.headshotDataUrl || "", abortController.signal).then((photoUrl) =>
+        update(responderRef, { "generated/photoUrl": photoUrl })
+      ),
+    ]);
+    await update(responderRef, { isGenerating: false, error: null });
+  } catch (error) {
+    await update(responderRef, { isGenerating: false, error: error instanceof Error ? error.message : String(error) });
+  } finally {
+    // Clean up the abort controller
+    generationAbortControllers.delete(guid);
+  }
+}
 
 export async function markAsDone(guid: string): Promise<void> {
   if (!guid) return;

@@ -2,7 +2,7 @@ import { GoogleGenAI, Type, type Content, type GenerateContentConfig } from "@go
 import { apiKeys$ } from "./connections/connections.component.js";
 import { noIDontPhotoPrompt, noIDontVowPromptV2, yesIDoPhotoPrompt, yesIDoVowPromptV2 } from "./prompts.js";
 
-export function generateVow(mode: "yes" | "no", params: any, abortSignal?: AbortSignal): Promise<{ humanVow: string; aiVow: string }> {
+export function generateVow(mode: "yes" | "no", params: any, abortSignal?: AbortSignal): Promise<{ humanVow: string; aiVow: string; aiAnswer: string }> {
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
@@ -12,14 +12,17 @@ export function generateVow(mode: "yes" | "no", params: any, abortSignal?: Abort
     responseSchema: {
       type: Type.OBJECT,
       properties: {
-        AI_vow: {
-          type: Type.STRING,
-        },
         Human_vow: {
           type: Type.STRING,
         },
+        AI_vow: {
+          type: Type.STRING,
+        },
+        AI_final_answer: {
+          type: Type.STRING,
+        },
       },
-      propertyOrdering: ["AI_vow", "Human_vow"],
+      propertyOrdering: ["Human_vow", "AI_vow", "AI_final_answer"],
     },
     abortSignal,
   } satisfies GenerateContentConfig;
@@ -53,6 +56,7 @@ export function generateVow(mode: "yes" | "no", params: any, abortSignal?: Abort
       return {
         humanVow: json.Human_vow,
         aiVow: json.AI_vow,
+        aiAnswer: json.AI_final_answer,
       };
     });
 }

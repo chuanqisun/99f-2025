@@ -5,9 +5,10 @@ import { onValue, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { toDataURL } from "qrcode";
 import { BehaviorSubject, map } from "rxjs";
-import { deleteFor, markAsDone, markAsNew, resetFor } from "./actions";
+import { deleteFor, generateFor, markAsDone, markAsNew, resetFor } from "./actions";
 import { db } from "./firebase";
 import type { Responder } from "./host";
+import { renderResponderStatus } from "./responder-utils";
 import { createComponent } from "./sdk/create-component";
 
 const state$ = new BehaviorSubject<{
@@ -76,6 +77,13 @@ const Details = createComponent(() => {
             >
               Back
             </button>
+            ${submission?.generated?.decision
+              ? html`<strong>Decision:</strong> ${submission.generated.decision}`
+              : html`
+                  <button @click=${() => generateFor(submission?.guid || "", "yes")} ?disabled=${submission?.isCompleted}>Yes</button>
+                  <button @click=${() => generateFor(submission?.guid || "", "no")} ?disabled=${submission?.isCompleted}>No</button>
+                  <button @click=${() => generateFor(submission?.guid || "", "random")} ?disabled=${submission?.isCompleted}>Random</button>
+                `}
             ${submission?.generated?.humanVow && humanVowQrDataUrl
               ? html`<button
                   @click=${() => {
@@ -108,9 +116,10 @@ const Details = createComponent(() => {
             ? html`<p>Error: ${error}</p>`
             : submission
               ? html`
-                  <h2>${submission.fullName}</h2>
+                  <h2>${submission.fullName} ${renderResponderStatus(submission)}</h2>
                   <p><strong>Human Vow:</strong> ${submission.generated?.humanVow || "N/A"}</p>
                   <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>
+                  <p><strong>AI Final Answer:</strong> ${submission.generated?.aiAnswer || "N/A"}</p>
                   ${submission.generated?.photoUrl ? html`<img src="${submission.generated?.photoUrl}" alt="Generated Photo" style="max-width: 200px;" />` : ""}
 
                   <h2>Details</h2>
