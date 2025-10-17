@@ -55,17 +55,15 @@ export async function generateFor(guid: string, response: "yes" | "no" | "random
       perfectFirstDate: responder.perfectFirstDate || "",
     };
     await Promise.all([
-      generateVow(actualResponse, params, abortController.signal).then(
-        ({ humanVow, aiVow, aiAnswer, aiVoice, humanVowAudioUrl, aiVowAudioUrl, aiAnswerAudioUrl }) =>
-          update(responderRef, {
-            "generated/humanVow": humanVow,
-            "generated/aiVow": aiVow,
-            "generated/aiAnswer": aiAnswer,
-            "generated/aiVoice": aiVoice,
-            "generated/humanVowAudioUrl": humanVowAudioUrl,
-            "generated/aiVowAudioUrl": aiVowAudioUrl,
-            "generated/aiAnswerAudioUrl": aiAnswerAudioUrl,
-          })
+      generateVow(actualResponse, params, abortController.signal).then(({ humanVow, aiVow, aiAnswer, aiVoice, aiVowAudioUrl, aiAnswerAudioUrl }) =>
+        update(responderRef, {
+          "generated/humanVow": humanVow,
+          "generated/aiVow": aiVow,
+          "generated/aiAnswer": aiAnswer,
+          "generated/aiVoice": aiVoice,
+          "generated/aiVowAudioUrl": aiVowAudioUrl,
+          "generated/aiAnswerAudioUrl": aiAnswerAudioUrl,
+        })
       ),
       generatePhoto(actualResponse, responder.headshotDataUrl || "", abortController.signal).then((photoUrl) =>
         update(responderRef, { "generated/photoUrl": photoUrl })

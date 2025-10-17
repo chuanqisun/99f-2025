@@ -19,15 +19,8 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 /**
  * Get the appropriate voice based on the AI voice description
  */
-function selectVoiceFromDescription(voiceDescription: string): string {
-  const lowerDesc = voiceDescription.toLowerCase();
-
-  // Simple heuristic: if description mentions male/masculine/deep, use male voice
-  const maleKeywords = ["male", "masculine", "deep", "bass", "baritone", "strong", "commanding"];
-  const isMale = maleKeywords.some((keyword) => lowerDesc.includes(keyword));
-
-  const voices = isMale ? maleVoices : femaleVoices;
-  // Select a random voice from the appropriate gender category
+function getRandomVoice(): string {
+  const voices = [...femaleVoices, ...maleVoices];
   return voices[Math.floor(Math.random() * voices.length)];
 }
 
@@ -35,7 +28,7 @@ export async function generateVow(
   mode: "yes" | "no",
   params: any,
   abortSignal?: AbortSignal
-): Promise<{ humanVow: string; aiVow: string; aiAnswer: string; aiVoice: string; humanVowAudioUrl: string; aiVowAudioUrl: string; aiAnswerAudioUrl: string }> {
+): Promise<{ humanVow: string; aiVow: string; aiAnswer: string; aiVoice: string; aiVowAudioUrl: string; aiAnswerAudioUrl: string }> {
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
@@ -94,28 +87,22 @@ export async function generateVow(
   const aiVoiceDescription = json.AI_voice;
 
   // Select an appropriate voice based on the description
-  const selectedVoice = selectVoiceFromDescription(aiVoiceDescription);
+  const selectedVoice = getRandomVoice();
 
   // Generate audio blobs for each vow and answer
-  const [humanVowSpeech, aiVowSpeech, aiAnswerSpeech] = await Promise.all([
-    firstValueFrom(generateAudioBlob(humanVow, selectedVoice, aiVoiceDescription)),
+  const [aiVowSpeech, aiAnswerSpeech] = await Promise.all([
     firstValueFrom(generateAudioBlob(aiVow, selectedVoice, aiVoiceDescription)),
     firstValueFrom(generateAudioBlob(aiAnswer, selectedVoice, aiVoiceDescription)),
   ]);
 
   // Convert blobs to data URLs
-  const [humanVowAudioUrl, aiVowAudioUrl, aiAnswerAudioUrl] = await Promise.all([
-    blobToDataUrl(humanVowSpeech!.blob),
-    blobToDataUrl(aiVowSpeech!.blob),
-    blobToDataUrl(aiAnswerSpeech!.blob),
-  ]);
+  const [aiVowAudioUrl, aiAnswerAudioUrl] = await Promise.all([blobToDataUrl(aiVowSpeech!.blob), blobToDataUrl(aiAnswerSpeech!.blob)]);
 
   return {
     humanVow,
     aiVow,
     aiAnswer,
     aiVoice: aiVoiceDescription,
-    humanVowAudioUrl,
     aiVowAudioUrl,
     aiAnswerAudioUrl,
   };
