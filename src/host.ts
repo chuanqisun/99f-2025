@@ -17,7 +17,7 @@ async function resetFor(responder: Responder) {
 async function generateFor(responder: Responder, response: "yes" | "no" | "random") {
   if (!responder.email) return;
   const responderRef = ref(db, `/responders/${responder.email}`);
-  await update(responderRef, { isGenerating: true, error: null, "generated/vow": null, "generated/photoUrl": null });
+  await update(responderRef, { isGenerating: true, error: null, "generated/humanVow": null, "generated/aiVow": null, "generated/photoUrl": null });
   try {
     let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
     const params = {
@@ -30,7 +30,7 @@ async function generateFor(responder: Responder, response: "yes" | "no" | "rando
       perfectFirstDate: responder.perfectFirstDate || "",
     };
     await Promise.all([
-      generateVow(actualResponse, params).then((vow) => update(responderRef, { "generated/vow": vow })),
+      generateVow(actualResponse, params).then(({ humanVow, aiVow }) => update(responderRef, { "generated/humanVow": humanVow, "generated/aiVow": aiVow })),
       generatePhoto(actualResponse, responder.headshotDataUrl || "").then((photoUrl) => update(responderRef, { "generated/photoUrl": photoUrl })),
     ]);
     await update(responderRef, { "generated/decision": actualResponse, isGenerating: false, error: null });
@@ -55,6 +55,9 @@ export interface Responder {
   error?: string;
   generated?: {
     decision?: "yes" | "no";
+    humanVow?: string;
+    aiVow?: string;
+    /* @deprecated */
     vow?: string;
     photoUrl?: string;
   };
@@ -94,9 +97,9 @@ const Host = createComponent(() => {
             ${submissions.map(
               (sub) => html`
                 <li>
-                  <a target="_blank" href="details.html?email=${sub.email}">${sub.fullName}</a> ${sub.generated?.vow ? "📋" : ""}${sub.generated?.photoUrl
-                    ? "📷"
-                    : ""}${sub.error ? html`<span title="${sub.error}">⚠️</span>` : ""}
+                  <a target="_blank" href="details.html?email=${sub.email}">${sub.fullName}</a> ${sub.generated?.humanVow && sub.generated?.aiVow
+                    ? "📋"
+                    : ""}${sub.generated?.photoUrl ? "📷" : ""}${sub.error ? html`<span title="${sub.error}">⚠️</span>` : ""}
                   ${sub.isGenerating
                     ? html`<span>generating...</span>`
                     : sub.generated?.decision

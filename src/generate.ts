@@ -1,18 +1,33 @@
-import { GoogleGenAI, type Content } from "@google/genai";
+import { GoogleGenAI, Type, type Content } from "@google/genai";
 import { apiKeys$ } from "./connections/connections.component.js";
-import { noIDontPhotoPrompt, noIDontVowPrompt, yesIDoPhotoPrompt, yesIDoVowPrompt } from "./prompts.js";
+import { noIDontPhotoPrompt, noIDontVowPromptV2, yesIDoPhotoPrompt, yesIDoVowPromptV2 } from "./prompts.js";
 
-export function generateVow(mode: "yes" | "no", params: any): Promise<string> {
+export function generateVow(mode: "yes" | "no", params: any): Promise<{ humanVow: string; aiVow: string }> {
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
   const model = "gemini-2.5-flash";
+  const config = {
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: Type.OBJECT,
+      properties: {
+        AI_vow: {
+          type: Type.STRING,
+        },
+        Human_vow: {
+          type: Type.STRING,
+        },
+      },
+      propertyOrdering: ["AI_vow", "Human_vow"],
+    },
+  };
   const contents = [
     {
       role: "model",
       parts: [
         {
-          text: mode === "yes" ? yesIDoVowPrompt : noIDontVowPrompt,
+          text: mode === "yes" ? yesIDoVowPromptV2 : noIDontVowPromptV2,
         },
       ],
     } satisfies Content,
@@ -30,8 +45,15 @@ export function generateVow(mode: "yes" | "no", params: any): Promise<string> {
     .generateContent({
       model,
       contents,
+      config,
     })
-    .then((response) => response.text!);
+    .then((response) => {
+      const json = JSON.parse(response.text!);
+      return {
+        humanVow: json.Human_vow,
+        aiVow: json.AI_vow,
+      };
+    });
 }
 
 export async function generatePhoto(mode: "yes" | "no", referencePhotoUrl: string): Promise<string> {
