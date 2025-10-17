@@ -1,7 +1,6 @@
 import { onValue, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
-import { decodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import "./human-vow.css";
 import { createComponent } from "./sdk/create-component";
@@ -13,13 +12,12 @@ const state$ = new BehaviorSubject<{ vow: string | null; error: string | null }>
 
 const HumanVow = createComponent(() => {
   const urlParams = new URLSearchParams(window.location.search);
-  const encodedEmail = urlParams.get("id");
-  const email = encodedEmail ? decodeEmail(encodedEmail) : null;
+  const guid = urlParams.get("id");
 
-  if (!email) {
-    state$.next({ vow: null, error: "No Email provided" });
+  if (!guid) {
+    state$.next({ vow: null, error: "No ID provided" });
   } else {
-    const submissionRef = ref(db, `responders/${email}`);
+    const submissionRef = ref(db, `responders/${guid}`);
     onValue(
       submissionRef,
       (snapshot) => {

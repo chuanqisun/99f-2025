@@ -1,8 +1,8 @@
-import { GoogleGenAI, Type, type Content } from "@google/genai";
+import { GoogleGenAI, Type, type Content, type GenerateContentConfig } from "@google/genai";
 import { apiKeys$ } from "./connections/connections.component.js";
 import { noIDontPhotoPrompt, noIDontVowPromptV2, yesIDoPhotoPrompt, yesIDoVowPromptV2 } from "./prompts.js";
 
-export function generateVow(mode: "yes" | "no", params: any): Promise<{ humanVow: string; aiVow: string }> {
+export function generateVow(mode: "yes" | "no", params: any, abortSignal?: AbortSignal): Promise<{ humanVow: string; aiVow: string }> {
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
@@ -21,7 +21,8 @@ export function generateVow(mode: "yes" | "no", params: any): Promise<{ humanVow
       },
       propertyOrdering: ["AI_vow", "Human_vow"],
     },
-  };
+    abortSignal,
+  } satisfies GenerateContentConfig;
   const contents = [
     {
       role: "model",
@@ -56,14 +57,15 @@ export function generateVow(mode: "yes" | "no", params: any): Promise<{ humanVow
     });
 }
 
-export async function generatePhoto(mode: "yes" | "no", referencePhotoUrl: string): Promise<string> {
+export async function generatePhoto(mode: "yes" | "no", referencePhotoUrl: string, abortSignal?: AbortSignal): Promise<string> {
   const prompt = mode === "yes" ? yesIDoPhotoPrompt : noIDontPhotoPrompt;
   const ai = new GoogleGenAI({
     apiKey: apiKeys$.value.gemini!,
   });
   const config = {
     responseModalities: ["IMAGE", "TEXT"],
-  };
+    abortSignal,
+  } satisfies GenerateContentConfig;
   const model = "gemini-2.5-flash-image-preview";
 
   // Parse the reference photo data URL

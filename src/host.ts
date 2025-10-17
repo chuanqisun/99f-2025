@@ -5,7 +5,7 @@ import { onValue, ref, update } from "firebase/database";
 import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
 import { BehaviorSubject, map } from "rxjs";
-import { deleteFor, markAsDone, markAsNew, resetFor } from "./actions";
+import { deleteFor, generationAbortControllers, markAsDone, markAsNew, resetFor } from "./actions";
 import { ConnectionsComponent } from "./connections/connections.component";
 import { db } from "./firebase";
 import { generatePhoto, generateVow } from "./generate.js";
@@ -30,6 +30,10 @@ async function getResponder(guid: string): Promise<Responder | null> {
 async function generateFor(guid: string, response: "yes" | "no" | "random") {
   if (!guid) return;
   const responderRef = ref(db, `/responders/${guid}`);
+
+  // Create a new abort controller for this generation request
+  const abortController = new AbortController();
+  generationAbortControllers.set(guid, abortController);
 
   // Calculate the actual decision first
   let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
@@ -56,12 +60,19 @@ async function generateFor(guid: string, response: "yes" | "no" | "random") {
       perfectFirstDate: responder.perfectFirstDate || "",
     };
     await Promise.all([
-      generateVow(actualResponse, params).then(({ humanVow, aiVow }) => update(responderRef, { "generated/humanVow": humanVow, "generated/aiVow": aiVow })),
-      generatePhoto(actualResponse, responder.headshotDataUrl || "").then((photoUrl) => update(responderRef, { "generated/photoUrl": photoUrl })),
+      generateVow(actualResponse, params, abortController.signal).then(({ humanVow, aiVow }) =>
+        update(responderRef, { "generated/humanVow": humanVow, "generated/aiVow": aiVow })
+      ),
+      generatePhoto(actualResponse, responder.headshotDataUrl || "", abortController.signal).then((photoUrl) =>
+        update(responderRef, { "generated/photoUrl": photoUrl })
+      ),
     ]);
     await update(responderRef, { isGenerating: false, error: null });
   } catch (error) {
     await update(responderRef, { isGenerating: false, error: error instanceof Error ? error.message : String(error) });
+  } finally {
+    // Clean up the abort controller
+    generationAbortControllers.delete(guid);
   }
 }
 

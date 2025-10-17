@@ -2,19 +2,17 @@ import { get, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
 import "./certificate.css";
-import { decodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import "./prototype.css";
 
 const urlParams = new URLSearchParams(window.location.search);
-const encodedEmail = urlParams.get("id");
-const email = encodedEmail ? decodeEmail(encodedEmail) : null;
+const guid = urlParams.get("id");
 
-if (!email) {
-  render(html`<p>No email provided</p>`, document.getElementById("app")!);
+if (!guid) {
+  render(html`<p>No ID provided</p>`, document.getElementById("app")!);
 } else {
-  const responderRef = ref(db, `/responders/${email}`);
+  const responderRef = ref(db, `/responders/${guid}`);
   get(responderRef)
     .then((snapshot) => {
       const responder = snapshot.val() as Responder;
