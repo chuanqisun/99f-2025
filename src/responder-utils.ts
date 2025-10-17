@@ -7,17 +7,12 @@ import type { Responder } from "./host";
  * @returns HTML template with status indicators
  */
 export function renderResponderStatus(responder: Responder) {
+  const hasVow = responder.generated?.humanVow && responder.generated?.aiVow;
+  const hasPhoto = responder.generated?.photoUrl;
+
   return html`
-    ${responder.isGenerating
-      ? html`
-          <span title="Generating vow">⏳</span>
-          <span title="Generating photo">⏳</span>
-        `
-      : html`
-          ${responder.generated?.humanVow && responder.generated?.aiVow ? html`<span title="Vow generated">📋</span>` : ""}${responder.generated?.photoUrl
-            ? html`<span title="Photo generated">📷</span>`
-            : ""}
-        `}
+    ${responder.isGenerating && !hasVow ? html`<span title="Generating vow">⏳</span>` : hasVow ? html`<span title="Vow generated">📋</span>` : ""}
+    ${responder.isGenerating && !hasPhoto ? html`<span title="Generating photo">⏳</span>` : hasPhoto ? html`<span title="Photo generated">📷</span>` : ""}
     ${responder.error ? html`<span title="${responder.error}">⚠️</span>` : ""} ${responder.isCompleted ? html`<span title="Completed">✅</span>` : ""}
   `;
 }
