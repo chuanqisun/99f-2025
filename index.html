@@ -475,12 +475,17 @@
       const $ = (sel) => document.querySelector(sel);
       const statusEl = $("#status");
 
-      const emailToKey = (email) =>
-        email
-          .trim()
-          .toLowerCase()
-          .replaceAll(".", ",")
-          .replace(/[#$\[\]]/g, "_");
+      // Generate a UUID v4 using crypto API
+      function generateGUID() {
+        const array = new Uint8Array(16);
+        crypto.getRandomValues(array);
+        array[6] = (array[6] & 0x0f) | 0x40;
+        array[8] = (array[8] & 0x3f) | 0x80;
+        const hex = Array.from(array)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      }
 
       const say = (msg, type = "") => {
         statusEl.textContent = msg;
@@ -603,7 +608,7 @@
         const data = new FormData(form);
         const email = (data.get("email") || "").toString().trim();
         if (!email) {
-          say("Email is required (it’s your key to the after-base).", "err");
+          say("Email is required.", "err");
           return;
         }
         if (!data.get("headshotDataUrl")) {
@@ -614,7 +619,11 @@
         const vowSelected = data.get("vow");
         const finalVow = (vowSelected === "other" ? (data.get("vowOther") || "").toString().trim() : vowSelected) || "";
 
+        // Generate a unique GUID for this responder
+        const guid = generateGUID();
+
         const payload = {
+          guid,
           email,
           fullName: (data.get("fullName") || "").toString(),
           jobArea: (data.get("jobArea") || "").toString(),
@@ -635,8 +644,7 @@
         say("Summoning database spirits…");
 
         try {
-          const key = emailToKey(email);
-          await set(ref(db, `responders/${key}`), payload);
+          await set(ref(db, `responders/${guid}`), payload);
 
           say("Saved! Our spectral clerks will be in touch. 🪦", "ok");
           submitBig.textContent = "✅ Saved!";

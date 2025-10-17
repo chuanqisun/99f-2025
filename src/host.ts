@@ -6,16 +6,15 @@ import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
 import { BehaviorSubject, map } from "rxjs";
 import { ConnectionsComponent } from "./connections/connections.component";
-import { encodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import { generatePhoto, generateVow } from "./generate.js";
 import { createComponent } from "./sdk/create-component";
 
 const submissions$ = new BehaviorSubject<Responder[]>([]);
 
-// Helper to get responder data from email
-async function getResponder(email: string): Promise<Responder | null> {
-  const responderRef = ref(db, `/responders/${email}`);
+// Helper to get responder data from guid
+async function getResponder(guid: string): Promise<Responder | null> {
+  const responderRef = ref(db, `/responders/${guid}`);
   return new Promise((resolve) => {
     onValue(
       responderRef,
@@ -27,30 +26,30 @@ async function getResponder(email: string): Promise<Responder | null> {
   });
 }
 
-async function resetFor(email: string) {
-  if (!email) return;
-  const responderRef = ref(db, `/responders/${email}`);
+async function resetFor(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
   await update(responderRef, { generated: null, isGenerating: false, error: null });
 }
 
-async function markAsDone(email: string) {
-  if (!email) return;
-  const responderRef = ref(db, `/responders/${email}`);
+async function markAsDone(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
   await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
 }
 
-async function markAsNew(email: string) {
-  if (!email) return;
-  const responderRef = ref(db, `/responders/${email}`);
+async function markAsNew(guid: string) {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
   await update(responderRef, { isCompleted: false, modifiedAt: null });
 }
 
-async function generateFor(email: string, response: "yes" | "no" | "random") {
-  if (!email) return;
-  const responderRef = ref(db, `/responders/${email}`);
+async function generateFor(guid: string, response: "yes" | "no" | "random") {
+  if (!guid) return;
+  const responderRef = ref(db, `/responders/${guid}`);
   await update(responderRef, { isGenerating: true, error: null, "generated/humanVow": null, "generated/aiVow": null, "generated/photoUrl": null });
   try {
-    const responder = await getResponder(email);
+    const responder = await getResponder(guid);
     if (!responder) return;
 
     let actualResponse: "yes" | "no" = response === "random" ? (Math.random() < 0.5 ? "yes" : "no") : response;
@@ -74,6 +73,7 @@ async function generateFor(email: string, response: "yes" | "no" | "random") {
 }
 
 export interface Responder {
+  guid?: string;
   email?: string;
   aiFeeling?: string;
   dealbreakers?: string;
@@ -107,9 +107,9 @@ onValue(submissionsRef, (snapshot) => {
   const data = snapshot.val() as RespondersTable | null;
   if (!data) return;
 
-  const recordWithEmail = Object.entries(data).map(([email, record]) => ({ email, ...record }));
+  const recordWithGuid = Object.entries(data).map(([guid, record]) => ({ guid, ...record }));
 
-  submissions$.next(recordWithEmail);
+  submissions$.next(recordWithGuid);
 });
 
 function sortSubmissions(submissions: Responder[]): Responder[] {
@@ -149,7 +149,7 @@ const Host = createComponent(() => {
                 (sub) => html`
                   <tr data-completed=${ifDefined(sub.isCompleted)}>
                     <td>
-                      <a target="_blank" href="details.html?id=${encodeEmail(sub.email || "")}">${sub.fullName}</a>
+                      <a target="_blank" href="details.html?id=${sub.guid}">${sub.fullName}</a>
                     </td>
                     <td>
                       ${sub.generated?.humanVow && sub.generated?.aiVow ? "📋" : ""}${sub.generated?.photoUrl ? "📷" : ""}${sub.error
@@ -162,15 +162,15 @@ const Host = createComponent(() => {
                         ? html`<span>Generating...</span>`
                         : sub.generated?.decision
                           ? html`
-                              <button @click=${() => resetFor(sub.email || "")}>Reset</button>
+                              <button @click=${() => resetFor(sub.guid || "")}>Reset</button>
                               ${!sub.isCompleted
-                                ? html`<button @click=${() => markAsDone(sub.email || "")}>Mark as Done</button>`
-                                : html`<button @click=${() => markAsNew(sub.email || "")}>Mark as New</button>`}
+                                ? html`<button @click=${() => markAsDone(sub.guid || "")}>Mark as Done</button>`
+                                : html`<button @click=${() => markAsNew(sub.guid || "")}>Mark as New</button>`}
                             `
                           : html`
-                              <button @click=${() => generateFor(sub.email || "", "yes")}>Yes</button>
-                              <button @click=${() => generateFor(sub.email || "", "no")}>No</button>
-                              <button @click=${() => generateFor(sub.email || "", "random")}>Random</button>
+                              <button @click=${() => generateFor(sub.guid || "", "yes")}>Yes</button>
+                              <button @click=${() => generateFor(sub.guid || "", "no")}>No</button>
+                              <button @click=${() => generateFor(sub.guid || "", "random")}>Random</button>
                             `}
                     </td>
                   </tr>

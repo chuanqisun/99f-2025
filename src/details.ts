@@ -5,7 +5,6 @@ import { onValue, ref, update } from "firebase/database";
 import { html, render } from "lit-html";
 import { toDataURL } from "qrcode";
 import { BehaviorSubject, map } from "rxjs";
-import { decodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import { createComponent } from "./sdk/create-component";
@@ -27,27 +26,26 @@ const state$ = new BehaviorSubject<{
 });
 
 async function markAsDone(responder: Responder) {
-  if (!responder.email) return;
-  const responderRef = ref(db, `/responders/${responder.email}`);
+  if (!responder.guid) return;
+  const responderRef = ref(db, `/responders/${responder.guid}`);
   await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
 }
 
 const Details = createComponent(() => {
   const urlParams = new URLSearchParams(window.location.search);
-  const encodedEmail = urlParams.get("id");
-  const email = encodedEmail ? decodeEmail(encodedEmail) : null;
+  const guid = urlParams.get("id");
 
-  if (!email) {
-    state$.next({ submission: null, error: "No Email provided", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
+  if (!guid) {
+    state$.next({ submission: null, error: "No ID provided", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
   } else {
-    const submissionRef = ref(db, `responders/${email}`);
+    const submissionRef = ref(db, `responders/${guid}`);
     onValue(
       submissionRef,
       (snapshot) => {
         if (snapshot.exists()) {
           const submission = snapshot.val();
-          const certificateUrl = `certificate.html?id=${encodedEmail}`;
-          const humanVowUrl = `human-vow.html?id=${encodedEmail}`;
+          const certificateUrl = `certificate.html?id=${guid}`;
+          const humanVowUrl = `human-vow.html?id=${guid}`;
           Promise.all([toDataURL(certificateUrl, { width: 800 }).catch(() => null), toDataURL(humanVowUrl, { width: 800 }).catch(() => null)]).then(
             ([qrDataUrl, humanVowQrDataUrl]) => {
               state$.next({ submission, error: null, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl });
