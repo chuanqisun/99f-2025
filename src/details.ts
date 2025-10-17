@@ -52,8 +52,8 @@ const Details = createComponent(() => {
     });
   } else {
     const submissionRef = ref(db, `responders/${guid}`);
-    const certificateUrl = `certificate.html?id=${guid}`;
-    const humanVowUrl = `human-vow.html?id=${guid}`;
+    const certificateUrl = `${window.location.origin}${import.meta.env.BASE_URL}certificate.html?id=${guid}`;
+    const humanVowUrl = `${window.location.origin}${import.meta.env.BASE_URL}human-vow.html?id=${guid}`;
 
     onValue(
       submissionRef,
