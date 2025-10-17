@@ -2,10 +2,10 @@ import { get, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
 import "./certificate.css";
+import { decodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import "./prototype.css";
-import { decodeEmail } from "./email-encoding";
 
 const urlParams = new URLSearchParams(window.location.search);
 const encodedEmail = urlParams.get("id");

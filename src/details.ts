@@ -1,12 +1,14 @@
-import { onValue, ref } from "firebase/database";
+import "./details.css";
+import "./prototype.css";
+
+import { onValue, ref, update } from "firebase/database";
 import { html, render } from "lit-html";
 import { toDataURL } from "qrcode";
 import { BehaviorSubject, map } from "rxjs";
-import "./details.css";
+import { decodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import type { Responder } from "./host";
 import { createComponent } from "./sdk/create-component";
-import { decodeEmail, encodeEmail } from "./email-encoding";
 
 const state$ = new BehaviorSubject<{
   submission: Responder | null;
@@ -23,6 +25,12 @@ const state$ = new BehaviorSubject<{
   humanVowQrDataUrl: null,
   humanVowUrl: null,
 });
+
+async function markAsDone(responder: Responder) {
+  if (!responder.email) return;
+  const responderRef = ref(db, `/responders/${responder.email}`);
+  await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
+}
 
 const Details = createComponent(() => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -71,6 +79,35 @@ const Details = createComponent(() => {
             ? html`<p>Error: ${error}</p>`
             : submission
               ? html`
+                  <div class="action-buttons">
+                    ${submission.generated && qrDataUrl
+                      ? html`<button
+                          @click=${() => {
+                            const dialog = document.getElementById("qr-dialog") as HTMLDialogElement;
+                            dialog.showModal();
+                          }}
+                        >
+                          Show Certificate QR
+                        </button>`
+                      : ""}
+                    ${submission.generated?.humanVow && humanVowQrDataUrl
+                      ? html`<button
+                          @click=${() => {
+                            const dialog = document.getElementById("human-vow-qr-dialog") as HTMLDialogElement;
+                            dialog.showModal();
+                          }}
+                        >
+                          Show Human Vow QR
+                        </button>`
+                      : ""}
+                    ${submission.generated && !submission.isCompleted ? html`<button @click=${() => markAsDone(submission)}>Mark as Done</button>` : ""}
+                  </div>
+
+                  <h2>Generated</h2>
+                  <p><strong>Human Vow:</strong> ${submission.generated?.humanVow || "N/A"}</p>
+                  <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>
+                  ${submission.generated?.photoUrl ? html`<img src="${submission.generated?.photoUrl}" alt="Generated Photo" style="max-width: 200px;" />` : ""}
+
                   <h2>Submission Details</h2>
                   ${submission.headshotDataUrl ? html`<img src="${submission.headshotDataUrl}" alt="Headshot" style="max-width: 200px;" />` : ""}
                   <p><strong>Full Name:</strong> ${submission.fullName || "N/A"}</p>
@@ -82,31 +119,6 @@ const Details = createComponent(() => {
                   <p><strong>Ideal Traits:</strong> ${submission.idealTraits || "N/A"}</p>
                   <p><strong>Dealbreakers:</strong> ${submission.dealbreakers || "N/A"}</p>
                   <p><strong>Submitted At:</strong> ${submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : "N/A"}</p>
-                  <hr />
-                  <h3>Generated</h3>
-                  <p><strong>Human Vow:</strong> ${submission.generated?.humanVow || "N/A"}</p>
-                  <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>
-                  ${submission.generated?.photoUrl ? html`<img src="${submission.generated?.photoUrl}" alt="Generated Photo" style="max-width: 200px;" />` : ""}
-                  ${submission.generated && qrDataUrl
-                    ? html`<button
-                        @click=${() => {
-                          const dialog = document.getElementById("qr-dialog") as HTMLDialogElement;
-                          dialog.showModal();
-                        }}
-                      >
-                        Show Certificate QR
-                      </button>`
-                    : ""}
-                  ${submission.generated?.humanVow && humanVowQrDataUrl
-                    ? html`<button
-                        @click=${() => {
-                          const dialog = document.getElementById("human-vow-qr-dialog") as HTMLDialogElement;
-                          dialog.showModal();
-                        }}
-                      >
-                        Show Human Vow QR
-                      </button>`
-                    : ""}
                 `
               : html`<p>Loading...</p>`}
         </main>

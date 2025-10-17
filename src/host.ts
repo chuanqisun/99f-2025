@@ -1,11 +1,15 @@
+import "./host.css";
+import "./prototype.css";
+
 import { onValue, ref, update } from "firebase/database";
 import { html, render } from "lit-html";
+import { ifDefined } from "lit-html/directives/if-defined.js";
 import { BehaviorSubject, map } from "rxjs";
 import { ConnectionsComponent } from "./connections/connections.component";
+import { encodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import { generatePhoto, generateVow } from "./generate.js";
 import { createComponent } from "./sdk/create-component";
-import { encodeEmail } from "./email-encoding";
 
 const submissions$ = new BehaviorSubject<Responder[]>([]);
 
@@ -13,6 +17,18 @@ async function resetFor(responder: Responder) {
   if (!responder.email) return;
   const responderRef = ref(db, `/responders/${responder.email}`);
   await update(responderRef, { generated: null, isGenerating: false, error: null });
+}
+
+async function markAsDone(responder: Responder) {
+  if (!responder.email) return;
+  const responderRef = ref(db, `/responders/${responder.email}`);
+  await update(responderRef, { isCompleted: true, modifiedAt: Date.now() });
+}
+
+async function markAsNew(responder: Responder) {
+  if (!responder.email) return;
+  const responderRef = ref(db, `/responders/${responder.email}`);
+  await update(responderRef, { isCompleted: false, modifiedAt: null });
 }
 
 async function generateFor(responder: Responder, response: "yes" | "no" | "random") {
@@ -53,7 +69,9 @@ export interface Responder {
   submittedAt?: number;
   vow?: string;
   isGenerating?: boolean;
+  isCompleted?: boolean;
   error?: string;
+  modifiedAt?: number;
   generated?: {
     decision?: "yes" | "no";
     humanVow?: string;
@@ -77,6 +95,13 @@ onValue(submissionsRef, (snapshot) => {
   submissions$.next(recordWithEmail);
 });
 
+function sortSubmissions(submissions: Responder[]): Responder[] {
+  const incomplete = submissions.filter((s) => !s.isCompleted);
+  const completed = submissions.filter((s) => s.isCompleted).sort((a, b) => (b.modifiedAt || 0) - (a.modifiedAt || 0));
+
+  return [...incomplete, ...completed];
+}
+
 const Host = createComponent(() => {
   return submissions$.pipe(
     map(
@@ -94,28 +119,48 @@ const Host = createComponent(() => {
           </div>
         </dialog>
         <main>
-          <ul>
-            ${submissions.map(
-              (sub) => html`
-                <li>
-                  <a target="_blank" href="details.html?id=${encodeEmail(sub.email || '')}">${sub.fullName}</a> ${sub.generated?.humanVow && sub.generated?.aiVow
-                    ? "📋"
-                    : ""}${sub.generated?.photoUrl ? "📷" : ""}${sub.error ? html`<span title="${sub.error}">⚠️</span>` : ""}
-                  ${sub.isGenerating
-                    ? html`<span>generating...</span>`
-                    : sub.generated?.decision
-                      ? html`<button @click=${() => resetFor(sub)}>Reset</button>`
-                      : html`
-                          <button @click=${() => generateFor(sub, "yes")}>Yes</button>
-
-                          <button @click=${() => generateFor(sub, "no")}>No</button>
-
-                          <button @click=${() => generateFor(sub, "random")}>Random</button>
-                        `}
-                </li>
-              `
-            )}
-          </ul>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sortSubmissions(submissions).map(
+                (sub) => html`
+                  <tr data-completed=${ifDefined(sub.isCompleted)}>
+                    <td>
+                      <a target="_blank" href="details.html?id=${encodeEmail(sub.email || "")}">${sub.fullName}</a>
+                    </td>
+                    <td>
+                      ${sub.generated?.humanVow && sub.generated?.aiVow ? "📋" : ""}${sub.generated?.photoUrl ? "📷" : ""}${sub.error
+                        ? html`<span title="${sub.error}">⚠️</span>`
+                        : ""}
+                      ${sub.isGenerating ? html`<span>generating...</span>` : ""} ${sub.isCompleted ? "✅" : ""}
+                    </td>
+                    <td>
+                      ${sub.isGenerating
+                        ? html`<span>Generating...</span>`
+                        : sub.generated?.decision
+                          ? html`
+                              <button @click=${() => resetFor(sub)}>Reset</button>
+                              ${!sub.isCompleted
+                                ? html`<button @click=${() => markAsDone(sub)}>Mark as Done</button>`
+                                : html`<button @click=${() => markAsNew(sub)}>Mark as New</button>`}
+                            `
+                          : html`
+                              <button @click=${() => generateFor(sub, "yes")}>Yes</button>
+                              <button @click=${() => generateFor(sub, "no")}>No</button>
+                              <button @click=${() => generateFor(sub, "random")}>Random</button>
+                            `}
+                    </td>
+                  </tr>
+                `
+              )}
+            </tbody>
+          </table>
         </main>
       `
     )

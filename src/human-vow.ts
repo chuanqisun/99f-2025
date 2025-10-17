@@ -1,10 +1,10 @@
 import { onValue, ref } from "firebase/database";
 import { html, render } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
+import { decodeEmail } from "./email-encoding";
 import { db } from "./firebase";
 import "./human-vow.css";
 import { createComponent } from "./sdk/create-component";
-import { decodeEmail } from "./email-encoding";
 
 const state$ = new BehaviorSubject<{ vow: string | null; error: string | null }>({
   vow: null,
