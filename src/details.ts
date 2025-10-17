@@ -7,11 +7,20 @@ import { db } from "./firebase";
 import type { Responder } from "./host";
 import { createComponent } from "./sdk/create-component";
 
-const state$ = new BehaviorSubject<{ submission: Responder | null; error: string | null; qrDataUrl: string | null; certificateUrl: string | null }>({
+const state$ = new BehaviorSubject<{
+  submission: Responder | null;
+  error: string | null;
+  qrDataUrl: string | null;
+  certificateUrl: string | null;
+  humanVowQrDataUrl: string | null;
+  humanVowUrl: string | null;
+}>({
   submission: null,
   error: null,
   qrDataUrl: null,
   certificateUrl: null,
+  humanVowQrDataUrl: null,
+  humanVowUrl: null,
 });
 
 const Details = createComponent(() => {
@@ -19,7 +28,7 @@ const Details = createComponent(() => {
   const email = urlParams.get("email");
 
   if (!email) {
-    state$.next({ submission: null, error: "No Email provided", qrDataUrl: null, certificateUrl: null });
+    state$.next({ submission: null, error: "No Email provided", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
   } else {
     const submissionRef = ref(db, `responders/${email}`);
     onValue(
@@ -27,29 +36,33 @@ const Details = createComponent(() => {
       (snapshot) => {
         if (snapshot.exists()) {
           const submission = snapshot.val();
-          const url = `certificate.html?email=${email}`;
-          toDataURL(url, {
-            width: 800,
-          })
-            .then((qrDataUrl) => {
-              state$.next({ submission, error: null, qrDataUrl, certificateUrl: url });
-            })
-            .catch(() => {
-              state$.next({ submission, error: null, qrDataUrl: null, certificateUrl: url });
-            });
+          const certificateUrl = `certificate.html?email=${email}`;
+          const humanVowUrl = `human-vow.html?email=${email}`;
+          Promise.all([toDataURL(certificateUrl, { width: 800 }).catch(() => null), toDataURL(humanVowUrl, { width: 800 }).catch(() => null)]).then(
+            ([qrDataUrl, humanVowQrDataUrl]) => {
+              state$.next({ submission, error: null, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl });
+            }
+          );
         } else {
-          state$.next({ submission: null, error: "Submission not found", qrDataUrl: null, certificateUrl: null });
+          state$.next({ submission: null, error: "Submission not found", qrDataUrl: null, certificateUrl: null, humanVowQrDataUrl: null, humanVowUrl: null });
         }
       },
       (error) => {
-        state$.next({ submission: null, error: `Failed to load data: ${error.message}`, qrDataUrl: null, certificateUrl: null });
+        state$.next({
+          submission: null,
+          error: `Failed to load data: ${error.message}`,
+          qrDataUrl: null,
+          certificateUrl: null,
+          humanVowQrDataUrl: null,
+          humanVowUrl: null,
+        });
       }
     );
   }
 
   return state$.pipe(
     map(
-      ({ submission, error, qrDataUrl, certificateUrl }) => html`
+      ({ submission, error, qrDataUrl, certificateUrl, humanVowQrDataUrl, humanVowUrl }) => html`
         <header class="app-header"></header>
         <main>
           ${error
@@ -66,10 +79,11 @@ const Details = createComponent(() => {
                   <p><strong>Perfect First Date:</strong> ${submission.perfectFirstDate || "N/A"}</p>
                   <p><strong>Ideal Traits:</strong> ${submission.idealTraits || "N/A"}</p>
                   <p><strong>Dealbreakers:</strong> ${submission.dealbreakers || "N/A"}</p>
+                  <p><strong>Submitted At:</strong> ${submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : "N/A"}</p>
+                  <hr />
+                  <h3>Generated</h3>
                   <p><strong>Human Vow:</strong> ${submission.generated?.humanVow || "N/A"}</p>
                   <p><strong>AI Vow:</strong> ${submission.generated?.aiVow || "N/A"}</p>
-                  <p><strong>Submitted At:</strong> ${submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : "N/A"}</p>
-                  <h3>Generated</h3>
                   ${submission.generated?.photoUrl ? html`<img src="${submission.generated?.photoUrl}" alt="Generated Photo" style="max-width: 200px;" />` : ""}
                   ${submission.generated && qrDataUrl
                     ? html`<button
@@ -81,6 +95,16 @@ const Details = createComponent(() => {
                         Show Certificate QR
                       </button>`
                     : ""}
+                  ${submission.generated?.humanVow && humanVowQrDataUrl
+                    ? html`<button
+                        @click=${() => {
+                          const dialog = document.getElementById("human-vow-qr-dialog") as HTMLDialogElement;
+                          dialog.showModal();
+                        }}
+                      >
+                        Show Human Vow QR
+                      </button>`
+                    : ""}
                 `
               : html`<p>Loading...</p>`}
         </main>
@@ -90,6 +114,18 @@ const Details = createComponent(() => {
           <button
             @click=${() => {
               const dialog = document.getElementById("qr-dialog") as HTMLDialogElement;
+              dialog.close();
+            }}
+          >
+            Close
+          </button>
+        </dialog>
+        <dialog id="human-vow-qr-dialog">
+          ${humanVowQrDataUrl ? html`<img src="${humanVowQrDataUrl}" alt="QR Code" />` : ""}
+          ${humanVowUrl ? html`<a href="${humanVowUrl}" class="link">View Human Vow</a>` : ""}
+          <button
+            @click=${() => {
+              const dialog = document.getElementById("human-vow-qr-dialog") as HTMLDialogElement;
               dialog.close();
             }}
           >
